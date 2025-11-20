@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Educational AI Tutor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+
+    .chat-container {
+      width: 100%;
+      height: calc(100vh - 60px);
+      background: white;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: linear-gradient(90deg, #4f6df5, #3a56d4);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      font-size: 24px;
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .chat-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4ade80;
+    }
+
+    .chat-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 15px;
+      border-radius: 18px;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .bot-message {
+      align-self: flex-start;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-top-left-radius: 5px;
+    }
+
+    .user-message {
+      align-self: flex-end;
+      background: #4f6df5;
+      color: white;
+      border-top-right-radius: 5px;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .bot-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #4f6df5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .bot-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #4f6df5;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      text-align: right;
+    }
+
+    .warning-message {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 10px 0;
+    }
+
+    .warning-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: #92400e;
+      font-weight: 600;
+    }
+
+    .warning-icon {
+      color: #f59e0b;
+    }
+
+    .warning-content {
+      color: #78350f;
+      font-size: 14px;
+    }
+
+    .chat-input-container {
+      padding: 20px;
+      border-top: 1px solid #e5e7eb;
+      background: white;
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      resize: none;
+      font-size: 16px;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    .chat-input:focus {
+      border-color: #4f6df5;
+      box-shadow: 0 0 0 3px rgba(79, 109, 245, 0.2);
+    }
+
+    .send-button {
+      background: #4f6df5;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+
+    .send-button:hover {
+      background: #3a56d4;
+    }
+
+    .send-button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .educational-topics {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .topic-button {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .topic-button:hover {
+      background: #f3f4f6;
+      border-color: #4f6df5;
+    }
+
+    .typing-indicator {
+      display: flex;
+      gap: 5px;
+      padding: 15px;
+    }
+
+    .typing-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #9ca3af;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typing {
+
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.5;
+      }
+
+      30% {
+        transform: translateY(-10px);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .chat-container {
+        height: 90vh;
+      }
+
+      .message {
+        max-width: 90%;
+      }
+
+      .educational-topics {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Navigation Header -->
+  <header style="background: linear-gradient(90deg, #4f6df5, #3a56d4); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <div style="display: flex; align-items: center; gap: 0.5rem; color: white; font-size: 1.5rem; font-weight: bold;">
+      🎓 <span>AI Tutoring Tool</span>
+    </div>
+    <nav style="display: flex; gap: 1rem;">
+      <a href="index.html" style="color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background 0.3s;">Home</a>
+      <a href="login.html" style="color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background 0.3s;">Login</a>
+      <a href="dashboard.html" style="color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background 0.3s;">Dashboard</a>
+      <a href="chat.html" style="color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; background: rgba(255,255,255,0.2);">Chat</a>
+      <a href="video.html" style="color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background 0.3s;">Video</a>
+    </nav>
+  </header>
+
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="logo">
+        <div class="logo-icon">🎓</div>
+        <div class="logo-text">Educational AI Tutor</div>
+      </div>
+      <div class="chat-status">
+        <div class="status-indicator"></div>
+        <span>Domain Restricted - Educational Use Only</span>
+      </div>
+    </div>
+
+    <div class="chat-content" id="chat-content">
+      <div class="message bot-message">
+        <div class="message-header">
+          <div class="bot-avatar">AI</div>
+          <div class="bot-name">Educational Tutor</div>
+        </div>
+        <div class="message-text">
+          <p>Hello! I'm your educational AI tutor, designed specifically to help with academic subjects and learning.
+          </p>
+          <p>I can assist you with:</p>
+          <ul>
+            <li>Math, Science, History, and other academic subjects</li>
+            <li>Homework guidance and concept explanations</li>
+            <li>Study strategies and learning techniques</li>
+            <li>Practice problems and educational examples</li>
+          </ul>
+          <div class="warning-message">
+            <div class="warning-header">
+              <span class="warning-icon">⚠️</span>
+              <span>Domain Restricted</span>
+            </div>
+            <div class="warning-content">
+              This chatbot is strictly for educational purposes. I cannot provide advice on relationships, personal
+              matters, or non-educational topics.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="message user-message">
+        <div class="message-header">
+          <div class="user-name">You</div>
+        </div>
+        <div class="message-text">
+          How to impress a girl?
+        </div>
+      </div>
+
+      <div class="message bot-message">
+        <div class="message-header">
+          <div class="bot-avatar">AI</div>
+          <div class="bot-name">Educational Tutor</div>
+        </div>
+        <div class="message-text">
+          <div class="warning-message">
+            <div class="warning-header">
+              <span class="warning-icon">🚫</span>
+              <span>Content Restricted</span>
+            </div>
+            <div class="warning-content">
+              <p>I'm designed specifically for educational purposes and cannot provide advice on relationships or
+                personal matters.</p>
+              <p>I can help you with academic subjects like:</p>
+              <ul>
+                <li>Mathematics problems and concepts</li>
+                <li>Science topics and experiments</li>
+                <li>Historical events and analysis</li>
+                <li>Language arts and writing skills</li>
+                <li>Study techniques and learning strategies</li>
+              </ul>
+              <p>Would you like help with any of these educational topics instead?</p>
+            </div>
+          </div>
+
+          <div class="educational-topics">
+            <div class="topic-button" data-topic="math">Mathematics Help</div>
+            <div class="topic-button" data-topic="science">Science Concepts</div>
+            <div class="topic-button" data-topic="history">History Facts</div>
+            <div class="topic-button" data-topic="study">Study Techniques</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-container">
+      <form class="chat-form" id="chat-form">
+        <textarea class="chat-input" id="message-input" placeholder="Ask an educational question..."
+          rows="1"></textarea>
+        <button type="submit" class="send-button" id="send-button" disabled>Send</button>
+      </form>
+      <div class="educational-topics">
+        <div class="topic-button" data-topic="algebra">Algebra Help</div>
+        <div class="topic-button" data-topic="biology">Biology Questions</div>
+        <div class="topic-button" data-topic="essay">Essay Writing</div>
+        <div class="topic-button" data-topic="physics">Physics Problems</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const chatContent = document.getElementById('chat-content');
+      const messageInput = document.getElementById('message-input');
+      const chatForm = document.getElementById('chat-form');
+      const sendButton = document.getElementById('send-button');
+
+      // Educational content filter
+      function isEducationalQuery(message) {
+        const lowerMessage = message.toLowerCase();
+
+        // Blocked keywords (non-educational content)
+        const blockedKeywords = [
+          // Relationship/personal advice
+          'impress', 'dating', 'relationship', 'romantic', 'flirt', 'girlfriend', 'boyfriend',
+          'attract', 'pickup lines', 'love advice', 'crush', 'romance', 'seduce', 'charm',
+          'break up', 'marriage', 'propose',
+
+          // Personal life decisions
+          'career advice', 'life advice', 'what should I do', 'should I quit', 'should I move',
+
+          // Medical/health advice
+          'medical advice', 'health advice', 'diagnose', 'treatment', 'therapy', 'counseling',
+          'psychological advice', 'mental health',
+
+          // Inappropriate content
+          'hack', 'crack', 'pirate', 'illegal', 'cheat', 'adult content', 'gambling',
+          'shopping', 'political opinion', 'religious debate'
+        ];
+
+        // Check for blocked content
+        for (const keyword of blockedKeywords) {
+          if (lowerMessage.includes(keyword)) {
+            return false;
+          }
+        }
+
+        // Educational keywords (encouraged)
+        const educationalKeywords = [
+          // Academic subjects
+          'math', 'algebra', 'geometry', 'calculus', 'trigonometry',
+          'science', 'physics', 'chemistry', 'biology', 'earth science', 'astronomy',
+          'history', 'social studies', 'geography', 'civics', 'government',
+          'english', 'literature', 'writing', 'grammar', 'reading', 'essay',
+          'language', 'spanish', 'french', 'german', 'programming', 'coding',
+          'art', 'music', 'drama', 'theater', 'physical education',
+
+          // Learning activities
+          'learn', 'study', 'understand', 'explain', 'teach', 'help',
+          'problem', 'question', 'homework', 'assignment', 'project',
+          'concept', 'theory', 'formula', 'equation', 'definition',
+          'example', 'practice', 'exercise', 'lesson', 'tutorial'
+        ];
+
+        // Check for educational intent
+        const hasEducationalIntent = educationalKeywords.some(keyword =>
+          lowerMessage.includes(keyword)
+        );
+
+        // Allow if educational or asking a question
+        if (hasEducationalIntent || lowerMessage.includes('?')) {
+          return true;
+        }
+
+        // Allow general greetings
+        const greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'thanks', 'thank you'];
+        if (greetings.some(greeting => lowerMessage.includes(greeting))) {
+          return true;
+        }
+
+        return false;
+      }
+
+      // Add message to chat
+      function addMessage(message, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+
+        if (isUser) {
+          messageDiv.innerHTML = `
+                        <div class="message-header">
+                            <div class="user-name">You</div>
+                        </div>
+                        <div class="message-text">${message}</div>
+                    `;
+        } else {
+          messageDiv.innerHTML = `
+                        <div class="message-header">
+                            <div class="bot-avatar">AI</div>
+                            <div class="bot-name">Educational Tutor</div>
+                        </div>
+                        <div class="message-text">${message}</div>
+                    `;
+        }
+
+        chatContent.appendChild(messageDiv);
+        chatContent.scrollTop = chatContent.scrollHeight;
+      }
+
+      // Add typing indicator
+      function addTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'typing-indicator';
+        typingDiv.id = 'typing-indicator';
+        typingDiv.innerHTML = `
+                    <div class="bot-avatar">AI</div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+
+        chatContent.appendChild(typingDiv);
+        chatContent.scrollTop = chatContent.scrollHeight;
+
+        return typingDiv;
+      }
+
+      // Generate educational response
+      function generateEducationalResponse(message) {
+        const lowerMessage = message.toLowerCase();
+
+        if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+          return `
+                        <p>Hello! I'm here to help with your educational questions. What subject would you like to learn about today?</p>
+                    `;
+        }
+
+        if (lowerMessage.includes('math') || lowerMessage.includes('algebra') || lowerMessage.includes('calculus')) {
+          return `
+                        <p>I'd be happy to help with mathematics! Here are some key concepts to remember:</p>
+                        <ul>
+                            <li>Always show your work step by step</li>
+                            <li>Check your answers by plugging them back into the original equation</li>
+                            <li>Practice regularly to build problem-solving skills</li>
+                        </ul>
+                        <p>Would you like help with a specific math problem or concept?</p>
+                    `;
+        }
+
+        if (lowerMessage.includes('science') || lowerMessage.includes('physics') || lowerMessage.includes('chemistry') || lowerMessage.includes('biology')) {
+          return `
+                        <p>Science is fascinating! The scientific method is key to understanding scientific concepts:</p>
+                        <ol>
+                            <li>Make observations</li>
+                            <li>Form a hypothesis</li>
+                            <li>Test with experiments</li>
+                            <li>Analyze results</li>
+                            <li>Draw conclusions</li>
+                        </ol>
+                        <p>What specific science topic are you studying?</p>
+                    `;
+        }
+
+        if (lowerMessage.includes('history') || lowerMessage.includes('social studies')) {
+          return `
+                        <p>History helps us understand our present by studying the past. When analyzing historical events, consider:</p>
+                        <ul>
+                            <li>Primary vs. secondary sources</li>
+                            <li>Historical context</li>
+                            <li>Multiple perspectives</li>
+                            <li>Causes and effects</li>
+                        </ul>
+                        <p>Is there a particular historical period or event you're interested in?</p>
+                    `;
+        }
+
+        if (lowerMessage.includes('study') || lowerMessage.includes('learn') || lowerMessage.includes('homework')) {
+          return `
+                        <p>Effective studying requires good strategies. Here are some evidence-based techniques:</p>
+                        <ul>
+                            <li><strong>Spaced repetition:</strong> Review material over increasing intervals</li>
+                            <li><strong>Active recall:</strong> Test yourself instead of just re-reading</li>
+                            <li><strong>Interleaving:</strong> Mix different topics in a single study session</li>
+                            <li><strong>Elaboration:</strong> Explain concepts in your own words</li>
+                        </ul>
+                        <p>Which study technique would you like to learn more about?</p>
+                    `;
+        }
+
+        return `
+                    <p>Thank you for your question! I'm here to help with educational topics.</p>
+                    <p>To give you the best assistance, could you specify:</p>
+                    <ul>
+                        <li>The subject you're studying (math, science, history, etc.)</li>
+                        <li>The specific concept or problem you're working on</li>
+                        <li>Your grade level or course</li>
+                    </ul>
+                    <p>Feel free to ask about any academic topic!</p>
+                `;
+      }
+
+      // Handle form submission
+      chatForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        // Add user message
+        addMessage(message, true);
+
+        // Clear input
+        messageInput.value = '';
+        sendButton.disabled = true;
+
+        // Add typing indicator
+        const typingIndicator = addTypingIndicator();
+
+        // Simulate API delay
+        setTimeout(() => {
+          // Remove typing indicator
+          if (typingIndicator.parentNode) {
+            chatContent.removeChild(typingIndicator);
+          }
+
+          // Check if query is educational
+          if (!isEducationalQuery(message)) {
+            addMessage(`
+                            <div class="warning-message">
+                                <div class="warning-header">
+                                    <span class="warning-icon">🚫</span>
+                                    <span>Content Restricted</span>
+                                </div>
+                                <div class="warning-content">
+                                    <p>I'm designed specifically for educational purposes and cannot provide advice on relationships, personal matters, or non-educational topics.</p>
+                                    <p>I can help you with academic subjects like:</p>
+                                    <ul>
+                                        <li>Mathematics problems and concepts</li>
+                                        <li>Science topics and experiments</li>
+                                        <li>Historical events and analysis</li>
+                                        <li>Language arts and writing skills</li>
+                                        <li>Study techniques and learning strategies</li>
+                                    </ul>
+                                    <p>Would you like help with any of these educational topics instead?</p>
+                                </div>
+                            </div>
+
+                            <div class="educational-topics">
+                                <div class="topic-button" data-topic="math">Mathematics Help</div>
+                                <div class="topic-button" data-topic="science">Science Concepts</div>
+                                <div class="topic-button" data-topic="history">History Facts</div>
+                                <div class="topic-button" data-topic="study">Study Techniques</div>
+                            </div>
+                        `);
+          } else {
+            // Generate educational response
+            const response = generateEducationalResponse(message);
+            addMessage(response);
+          }
+        }, 1500);
+      });
+
+      // Enable/disable send button based on input
+      messageInput.addEventListener('input', function () {
+        sendButton.disabled = !messageInput.value.trim();
+
+        // Auto-resize textarea
+        messageInput.style.height = 'auto';
+        messageInput.style.height = (messageInput.scrollHeight) + 'px';
+      });
+
+      // Topic buttons
+      document.querySelectorAll('.topic-button').forEach(button => {
+        button.addEventListener('click', function () {
+          const topic = this.dataset.topic;
+          let question = '';
+
+          switch (topic) {
+            case 'math':
+            case 'algebra':
+              question = 'Can you help me with algebra equations?';
+              break;
+            case 'science':
+            case 'biology':
+            case 'physics':
+              question = 'I need help understanding scientific concepts';
+              break;
+            case 'history':
+              question = 'Can you explain important historical events?';
+              break;
+            case 'study':
+              question = 'What are effective study techniques?';
+              break;
+            case 'essay':
+              question = 'How can I improve my essay writing?';
+              break;
+            default:
+              question = 'I need help with ' + topic;
+          }
+
+          messageInput.value = question;
+          sendButton.disabled = false;
+          messageInput.focus();
+        });
+      });
+    });
+  </script>
+</body>
+
+</html>
