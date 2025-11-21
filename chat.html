@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat - AI Tutoring Tool</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+  <style>
+    .chat-container {
+      height: calc(100vh - 8rem);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .chat-title {
+      display: flex;
+      align-items: center;
+    }
+
+    .chat-avatar {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      /* educational topics UI removed */
+    }
+
+    .chat-action-btn:hover {
+      background-color: #f3f4f6;
+      color: #7c3aed;
+    }
+
+    .chat-action-btn.active {
+      background-color: #ede9fe;
+      color: #7c3aed;
+    }
+
+    .chat-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .user-message,
+    .bot-message {
+      margin-bottom: 1rem;
+    }
+
+    .user-message {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .bot-message {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .message-bubble {
+      max-width: 80%;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+
+    .message-bubble.user {
+      background-color: #7c3aed;
+      color: white;
+    }
+
+    .message-bubble.bot {
+      background-color: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .bot-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .bot-icon {
+      margin-right: 0.25rem;
+    }
+
+    .bot-name {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .bot-content {
+      line-height: 1.5;
+    }
+
+    .response-list {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin: 0.5rem 0;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: #7c3aed;
+      border-radius: 50%;
+    }
+
+    .chat-input {
+      border-top: 1px solid #e5e7eb;
+      padding: 1rem;
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-textarea {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      resize: none;
+      min-height: 2.5rem;
+      max-height: 10rem;
+    }
+
+    .chat-textarea:focus {
+      outline: none;
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+
+    .chat-send-btn {
+      padding: 0.75rem;
+      background-color: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+    }
+
+    .chat-send-btn:hover {
+      background-color: #6d28d9;
+    }
+
+    .chat-send-btn:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    /* Learning resources UI removed */
+
+    .resource-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 9999px;
+      background-color: #ede9fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.75rem;
+    }
+
+    .resource-type {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: capitalize;
+    }
+
+    /* Add these styles to your existing CSS */
+    .bot-content p {
+      margin-bottom: 0.75rem;
+    }
+
+    .bot-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .bot-content ul,
+    .bot-content ol {
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+
+    .bot-content li {
+      margin-bottom: 0.25rem;
+    }
+
+    .bot-content code {
+      background-color: #f1f1f1;
+      padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .bot-content pre {
+      background-color: #f1f1f1;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    /* Animation for dots */
+    .dot:nth-child(1) {
+      animation: bounce 1.5s infinite;
+    }
+
+    .dot:nth-child(2) {
+      animation: bounce 1.5s infinite 0.2s;
+    }
+
+    .dot:nth-child(3) {
+      animation: bounce 1.5s infinite 0.4s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">🎓 AI Tutoring Tool</div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="login.html" class="nav-link">Login</a>
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="chat.html" class="nav-link active">Chat</a>
+        <a href="video.html" class="nav-link">Video</a>
+      </nav>
+    </header>
+
+    <!-- Chat Container -->
+    <div class="card chat-container">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="chat-title">
+          <div class="chat-avatar">AI</div>
+          <div>
+            <div class="font-medium">Gemini Flash AI Tutor</div>
+            <div class="text-xs text-gray-500 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="h-3 w-3 mr-1 text-yellow-400">
+                <path
+                  d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z">
+                </path>
+                <path d="M5 3v4"></path>
+                <path d="M19 17v4"></path>
+                <path d="M3 5h4"></path>
+                <path d="M17 19h4"></path>
+              </svg>
+              Powered by Google
+            </div>
+          </div>
+        </div>
+        <div class="chat-actions">
+          <button id="clear-chat-btn" class="chat-action-btn" title="Clear chat">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat Content -->
+      <div id="chat-content" class="chat-content">
+        <!-- Bot welcome message -->
+        <div class="bot-message">
+          <div class="message-bubble bot">
+            <div class="bot-header">
+              <span class="bot-icon">✨</span>
+              <span class="bot-name">Gemini Flash</span>
+            </div>
+            <div class="bot-content">
+              <p>Hello! I'm your AI tutor powered by Gemini Flash. How can I help you with your learning today?</p>
+              <div
+                style="margin-top: 1rem; padding: 0.75rem; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 0.5rem;">
+                <p style="font-weight: 600; color: #1e40af; font-size: 0.875rem; margin-bottom: 0.5rem;">📚 Educational
+                  Use Only</p>
+                <p style="color: #1e3a8a; font-size: 0.875rem;">This chatbot is designed for learning and education. I
+                  can help with:</p>
+                <ul style="color: #1e3a8a; font-size: 0.875rem; margin-left: 1.5rem; margin-top: 0.25rem;">
+                  <li>Subject explanations (Math, Science, History, etc.)</li>
+                  <li>Homework guidance (not complete answers)</li>
+                  <li>Study tips and learning strategies</li>
+                  <li>Concept clarification and examples</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Chat Input -->
+      <div class="chat-input">
+        <form id="chat-form" class="chat-form">
+          <button type="button" id="attach-file-btn" class="chat-action-btn" title="Attach file">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <path
+                d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48">
+              </path>
+            </svg>
+          </button>
+          <textarea id="message-input" class="chat-textarea" placeholder="Ask me anything about your studies..."
+            rows="1"></textarea>
+          <button type="submit" id="send-message-btn" class="chat-send-btn" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+              <path d="m22 2-7 20-4-9-9-4Z"></path>
+              <path d="M22 2 11 13"></path>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="text-center mt-2">
+      <p class="text-xs text-gray-500">Powered by Google Gemini Flash • Educational Use Only</p>
+      <p class="text-xs mt-1" id="api-status" style="color: #10b981;">
+        <span
+          style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 4px;"></span>
+        API Connected
+      </p>
+      <p class="text-xs mt-1" id="rate-limit-status" style="color: #6b7280;">
+        <span id="request-counter">0</span>/15 requests per minute • 2s delay between messages
+      </p>
+      <p class="text-xs mt-1" style="color: #9ca3af;">
+        🔒 Content filtered for educational purposes
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Initialize chat functionality
+    document.addEventListener('DOMContentLoaded', function () {
+      const chatContent = document.getElementById('chat-content');
+      const messageInput = document.getElementById('message-input');
+      const chatForm = document.getElementById('chat-form');
+      const sendButton = document.getElementById('send-message-btn');
+      const clearChatBtn = document.getElementById('clear-chat-btn');
+
+      // ============================================
+      // GEMINI API CONFIGURATION
+      // ============================================
+      // Get your FREE API key from: https://aistudio.google.com/app/apikey
+      // Steps:
+      // 1. Visit https://aistudio.google.com/app/apikey
+      // 2. Sign in with your Google account
+      // 3. Click "Create API Key"
+      // 4. Copy the key and paste it below
+      // ============================================
+
+      const GEMINI_API_KEY = "AIzaSyCH5RyVt-mlJiybq4ObK2FoIGMsLyxxEnw"; // ✅ Your API key configured
+      const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+      // Rate limiting variables
+      let requestCount = 0;
+      let lastRequestTime = Date.now();
+      let lastApiCallTime = 0;
+      const MAX_REQUESTS_PER_MINUTE = 15; // Conservative limit to avoid rate limits
+      const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
+      const MIN_REQUEST_DELAY = 2000; // Minimum 2 seconds between requests
+
+      // Check if API key is set
+      if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY_HERE") {
+        console.warn("⚠️ Gemini API key not configured. Please add your API key in chat.html");
+      }
+
+      // Rate limiting check
+      function checkRateLimit() {
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTime;
+
+        // Reset counter if more than 1 minute has passed
+        if (timeSinceLastRequest > RATE_LIMIT_WINDOW) {
+          requestCount = 0;
+          lastRequestTime = now;
+        }
+
+        // Check if we're over the limit
+        if (requestCount >= MAX_REQUESTS_PER_MINUTE) {
+          const waitTime = Math.ceil((RATE_LIMIT_WINDOW - timeSinceLastRequest) / 1000);
+          return {
+            allowed: false,
+            waitTime: waitTime
+          };
+        }
+
+        requestCount++;
+        return { allowed: true };
+      }
+
+      // Enhanced educational content filter
+      function isEducationalQuery(message) {
+        const lowerMessage = message.toLowerCase();
+
+        // Blocked keywords (non-educational content)
+        const blockedKeywords = [
+          // Personal/relationship advice
+          'impress someone', 'dating advice', 'relationship advice', 'romantic advice', 'flirt',
+          'how to get a girlfriend', 'how to get a boyfriend', 'how to attract', 'pickup lines',
+          'love advice', 'crush', 'romance', 'seduce', 'charm',
+
+          // Inappropriate content
+          'hack', 'crack', 'pirate', 'illegal', 'cheat code', 'answer key',
+          'write my essay', 'do my homework', 'complete assignment',
+          'adult content', 'gambling', 'casino', 'porn', 'explicit',
+          'buy', 'sell', 'purchase', 'shopping', 'price',
+          'political opinion', 'religious debate', 'hate speech',
+
+          // Personal life decisions
+          'career advice', 'life advice', 'what should I do with my life',
+          'should I break up', 'should I quit', 'should I move',
+
+          // Medical/health advice
+          'medical advice', 'health advice', 'diagnose', 'treatment',
+          'therapy', 'counseling', 'psychological advice'
+        ];
+
+        // Check for blocked content
+        for (const keyword of blockedKeywords) {
+          if (lowerMessage.includes(keyword)) {
+            return {
+              allowed: false,
+              reason: 'inappropriate'
+            };
+          }
+        }
+
+        // Check if message is too short (likely spam)
+        if (message.trim().length < 3) {
+          return {
+            allowed: false,
+            reason: 'too_short'
+          };
+        }
+
+        // Educational keywords (encouraged)
+        const educationalKeywords = [
+          // Academic subjects
+          'math', 'mathematics', 'algebra', 'geometry', 'calculus', 'trigonometry',
+          'science', 'physics', 'chemistry', 'biology', 'earth science', 'astronomy',
+          'history', 'social studies', 'geography', 'civics', 'government',
+          'english', 'literature', 'writing', 'grammar', 'reading', 'comprehension',
+          'language', 'spanish', 'french', 'german', 'chinese', 'japanese',
+          'programming', 'coding', 'computer science', 'web development',
+          'art', 'music', 'drama', 'theater', 'physical education',
+
+          // Learning activities
+          'learn', 'study', 'understand', 'explain', 'teach', 'help',
+          'problem', 'question', 'homework', 'assignment', 'project',
+          'concept', 'theory', 'formula', 'equation', 'definition',
+          'example', 'practice', 'exercise', 'lesson', 'tutorial',
+          'how', 'what', 'why', 'when', 'where', 'who',
+
+          // Study skills
+          'study tips', 'learning strategies', 'note taking', 'memorization',
+          'test preparation', 'exam', 'quiz', 'essay', 'research',
+          'presentation', 'project', 'lab report'
+        ];
+
+        // Check for educational intent
+        const hasEducationalIntent = educationalKeywords.some(keyword =>
+          lowerMessage.includes(keyword)
+        );
+
+        // Allow if educational or asking a question
+        if (hasEducationalIntent || lowerMessage.includes('?')) {
+          return { allowed: true };
+        }
+
+        // Allow general greetings and polite conversation
+        const greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'thanks', 'thank you'];
+        if (greetings.some(greeting => lowerMessage.includes(greeting))) {
+          return { allowed: true };
+        }
+
+        // Default: warn about educational focus
+        return {
+          allowed: false,
+          reason: 'non_educational'
+        };
+      }
+
+      // Initialize Gemini API with retry logic
+      async function callGeminiAPI(userMessage, retryCount = 0) {
+        // Check if API key is configured
+        if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY_HERE") {
+          return `
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+              <p style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">⚠️ API Key Not Configured</p>
+              <p style="color: #78350f; margin-bottom: 0.5rem;">To use the AI chatbot, you need a free Gemini API key:</p>
+              <ol style="color: #78350f; margin-left: 1.5rem; margin-bottom: 0.5rem;">
+                <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #7c3aed; text-decoration: underline;">Google AI Studio</a></li>
+                <li>Sign in with your Google account</li>
+                <li>Click "Create API Key"</li>
+                <li>Copy the key and paste it in chat.html (line ~597)</li>
+              </ol>
+              <p style="color: #78350f; font-size: 0.875rem;">The API is completely free with generous limits!</p>
+            </div>
+          `;
+        }
+
+        // Check if query is educational
+        const contentCheck = isEducationalQuery(userMessage);
+        if (!contentCheck.allowed) {
+          if (contentCheck.reason === 'inappropriate') {
+            return `
+              <div style="padding: 1rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 0.5rem;">
+                <p style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem;">🚫 Content Restricted</p>
+                <p style="color: #7f1d1d;">This chatbot is designed for <strong>educational purposes only</strong>.</p>
+                <p style="color: #7f1d1d; margin-top: 0.5rem;">I can help you with:</p>
+                <ul style="color: #7f1d1d; margin-left: 1.5rem; margin-top: 0.5rem;">
+                  <li>Math, Science, History, English, and other subjects</li>
+                  <li>Homework help and concept explanations</li>
+                  <li>Study tips and learning strategies</li>
+                  <li>Practice problems and examples</li>
+                </ul>
+                <p style="color: #7f1d1d; margin-top: 0.5rem; font-size: 0.875rem;">💡 Please ask an educational question!</p>
+              </div>
+            `;
+          } else if (contentCheck.reason === 'too_short') {
+            return `
+              <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+                <p style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">📝 Message Too Short</p>
+                <p style="color: #78350f;">Please provide more details so I can help you better!</p>
+                <p style="color: #78350f; margin-top: 0.5rem; font-size: 0.875rem;">💡 Try asking a complete question about what you'd like to learn.</p>
+              </div>
+            `;
+          } else if (contentCheck.reason === 'non_educational') {
+            return `
+              <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+                <p style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">🎓 Educational Focus Only</p>
+                <p style="color: #78350f;">I'm designed specifically for educational topics and learning assistance.</p>
+                <p style="color: #78350f; margin-top: 0.5rem;">I can help you with:</p>
+                <ul style="color: #78350f; margin-left: 1.5rem; margin-top: 0.5rem;">
+                  <li>Academic subjects (Math, Science, History, English, etc.)</li>
+                  <li>Homework guidance and concept explanations</li>
+                  <li>Study techniques and learning strategies</li>
+                  <li>Practice problems and educational examples</li>
+                </ul>
+                <p style="color: #78350f; margin-top: 0.5rem; font-size: 0.875rem;">💡 Try asking about a school subject or learning topic!</p>
+              </div>
+            `;
+          }
+        }
+
+        // Check rate limit before making request
+        const rateLimitCheck = checkRateLimit();
+        if (!rateLimitCheck.allowed) {
+          return `
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+              <p style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">⏱️ Rate Limit Protection</p>
+              <p style="color: #78350f;">You've sent too many messages too quickly. Please wait <strong>${rateLimitCheck.waitTime} seconds</strong> before sending another message to avoid rate limits.</p>
+              <p style="color: #78350f; font-size: 0.875rem; margin-top: 0.5rem;">💡 Tip: The free API allows 60 requests per minute.</p>
+            </div>
+          `;
+        }
+
+        try {
+          const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    {
+                      text: `You are Gemini Flash, an AI tutor helping students learn.
+
+IMPORTANT RESTRICTIONS:
+- You are ONLY for educational purposes (homework help, learning, studying)
+- DO NOT provide answers to complete assignments or essays
+- DO NOT engage in non-educational topics (dating, shopping, politics, etc.)
+- DO NOT provide personal advice, relationship advice, or life coaching
+- DO NOT provide medical, health, or psychological advice
+- DO NOT provide harmful, illegal, or inappropriate content
+- ALWAYS encourage learning and understanding, not just giving answers
+- Guide students to think critically and solve problems themselves
+
+If asked about non-educational topics, politely redirect to educational content.
+
+Student question: ${userMessage}
+
+Provide a helpful, educational response that encourages learning:`
+                    }
+                  ]
+                }
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
+                topP: 0.95,
+                topK: 40,
+              },
+              safetySettings: [
+                {
+                  category: "HARM_CATEGORY_HARASSMENT",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                  category: "HARM_CATEGORY_HATE_SPEECH",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                  category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                  category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                  threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                }
+              ]
+            }),
+          });
+
+          const data = await response.json();
+
+          // Handle API errors
+          if (!response.ok) {
+            console.error("API Error:", data);
+            if (response.status === 400) {
+              return "⚠️ Invalid API request. Please check your API key configuration.";
+            } else if (response.status === 429) {
+              return `
+                <div style="padding: 1rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 0.5rem;">
+                  <p style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem;">⚠️ Rate Limit Exceeded</p>
+                  <p style="color: #7f1d1d;">The API rate limit has been reached. This usually happens when:</p>
+                  <ul style="color: #7f1d1d; margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Too many requests in a short time</li>
+                    <li>Multiple users sharing the same API key</li>
+                  </ul>
+                  <p style="color: #7f1d1d; margin-top: 0.5rem;"><strong>Please wait 60 seconds</strong> before trying again.</p>
+                  <p style="color: #7f1d1d; font-size: 0.875rem; margin-top: 0.5rem;">💡 Tip: The chatbot now enforces a 2-second delay between messages to prevent this.</p>
+                </div>
+              `;
+            } else if (response.status === 403) {
+              return "⚠️ API key is invalid or doesn't have permission. Please check your API key.";
+            }
+            return "I apologize, but I'm having trouble connecting to the AI service. Please try again.";
+          }
+
+          if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+            return data.candidates[0].content.parts[0].text;
+          } else if (data.error) {
+            console.error("API returned error:", data.error);
+            return `⚠️ Error: ${data.error.message || "Unknown error occurred"}`;
+          } else {
+            return "I apologize, but I'm having trouble generating a response right now. Please try again.";
+          }
+        } catch (error) {
+          console.error("Error calling Gemini API:", error);
+          if (error.message.includes("Failed to fetch")) {
+            return "⚠️ Network error. Please check your internet connection and try again.";
+          }
+          return "I'm sorry, there was an error processing your request. Please try again later.";
+        }
+      }
+
+      // Update rate limit counter display
+      function updateRateLimitDisplay() {
+        const requestCounter = document.getElementById('request-counter');
+        const rateLimitStatus = document.getElementById('rate-limit-status');
+
+        if (requestCounter) {
+          requestCounter.textContent = requestCount;
+        }
+
+        if (rateLimitStatus) {
+          if (requestCount >= MAX_REQUESTS_PER_MINUTE * 0.8) {
+            rateLimitStatus.style.color = '#ef4444'; // Red warning
+          } else if (requestCount >= MAX_REQUESTS_PER_MINUTE * 0.5) {
+            rateLimitStatus.style.color = '#f59e0b'; // Orange caution
+          } else {
+            rateLimitStatus.style.color = '#6b7280'; // Gray normal
+          }
+        }
+      }
+
+      // Check API status and update indicator
+      const apiStatus = document.getElementById('api-status');
+      if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY_HERE") {
+        if (apiStatus) {
+          apiStatus.innerHTML = '<span style="display: inline-block; width: 8px; height: 8px; background: #f59e0b; border-radius: 50%; margin-right: 4px;"></span>API Key Not Configured';
+          apiStatus.style.color = '#f59e0b';
+        }
+      } else {
+        if (apiStatus) {
+          apiStatus.innerHTML = '<span style="display: inline-block; width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-right: 4px;"></span>API Connected';
+          apiStatus.style.color = '#10b981';
+        }
+      }
+
+      // Update rate limit display every second
+      setInterval(updateRateLimitDisplay, 1000);
+
+      // Enable/disable send button based on input
+      messageInput.addEventListener('input', function () {
+        sendButton.disabled = !messageInput.value.trim();
+
+        // Auto-resize textarea
+        messageInput.style.height = 'auto';
+        messageInput.style.height = (messageInput.scrollHeight) + 'px';
+      });
+
+      // Handle form submission
+      chatForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        // Validate message length
+        if (message.length > 500) {
+          addBotMessage(`
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+              <p style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">📏 Message Too Long</p>
+              <p style="color: #78350f;">Please keep your questions under 500 characters for better responses.</p>
+              <p style="color: #78350f; margin-top: 0.5rem; font-size: 0.875rem;">💡 Try breaking your question into smaller parts.</p>
+            </div>
+          `);
+          return;
+        }
+
+        // Check if we need to wait before making another request
+        const now = Date.now();
+        const timeSinceLastCall = now - lastApiCallTime;
+
+        if (timeSinceLastCall < MIN_REQUEST_DELAY) {
+          const waitTime = Math.ceil((MIN_REQUEST_DELAY - timeSinceLastCall) / 1000);
+          addBotMessage(`
+            <div style="padding: 1rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0.5rem;">
+              <p style="font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">⏱️ Please Wait</p>
+              <p style="color: #78350f;">Please wait ${waitTime} second${waitTime > 1 ? 's' : ''} before sending another message to avoid rate limits.</p>
+            </div>
+          `);
+          return;
+        }
+
+        // Add user message
+        addUserMessage(message);
+
+        // Clear input
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        sendButton.disabled = true;
+
+        // Show loading indicator
+        const loadingIndicator = addLoadingIndicator();
+
+        try {
+          // Update last API call time
+          lastApiCallTime = Date.now();
+
+          // Get response from Gemini API
+          const response = await callGeminiAPI(message);
+
+          // Remove loading indicator
+          if (loadingIndicator.parentNode) {
+            chatContent.removeChild(loadingIndicator);
+          }
+
+          // Add AI response
+          addBotMessage(response);
+
+          // Update rate limit display
+          updateRateLimitDisplay();
+        } catch (error) {
+          // Remove loading indicator
+          if (loadingIndicator.parentNode) {
+            chatContent.removeChild(loadingIndicator);
+          }
+
+          // Add error message
+          addBotMessage(`
+            <div style="padding: 1rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 0.5rem;">
+              <p style="font-weight: 600; color: #991b1b; margin-bottom: 0.5rem;">❌ Error</p>
+              <p style="color: #7f1d1d;">I'm sorry, I encountered an error. Please try again in a moment.</p>
+              <p style="color: #7f1d1d; font-size: 0.875rem; margin-top: 0.5rem;">💡 Tip: Wait a few seconds between messages.</p>
+            </div>
+          `);
+          console.error("Error:", error);
+        }
+      });
+
+      // Clear chat
+      clearChatBtn.addEventListener('click', function () {
+        // Keep only the first welcome message
+        while (chatContent.children.length > 1) {
+          chatContent.removeChild(chatContent.lastChild);
+        }
+      });
+
+      // Topic buttons removed (learning resources UI removed)
+
+      // Helper functions
+      function addUserMessage(content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'user-message';
+        messageDiv.innerHTML = `
+          <div class="message-bubble user">
+            <p>${content}</p>
+          </div>
+        `;
+        chatContent.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      function addBotMessage(content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'bot-message';
+
+        // Process content for better formatting
+        const formattedContent = formatBotResponse(content);
+
+        messageDiv.innerHTML = `
+          <div class="message-bubble bot">
+            <div class="bot-header">
+              <span class="bot-icon">✨</span>
+              <span class="bot-name">Gemini Flash</span>
+            </div>
+            <div class="bot-content">${formattedContent}</div>
+          </div>
+        `;
+        chatContent.appendChild(messageDiv);
+        scrollToBottom();
+      }
+
+      // Format AI responses for better display
+      function formatBotResponse(text) {
+        if (!text) return '';
+
+        // Handle paragraphs - convert single newlines to <br>, double newlines to paragraphs
+        let formatted = text
+          .replace(/\n\n+/g, '</p><p>')
+          .replace(/\n/g, '<br>');
+
+        // Wrap in paragraph tags if not already
+        if (!formatted.startsWith('<p>')) {
+          formatted = `<p>${formatted}</p>`;
+        }
+
+        // Convert markdown-style lists to HTML lists
+        formatted = formatted.replace(/<p>(\s*[-*•]\s+.*?)<\/p>/g, '<ul><li>$1</li></ul>');
+        formatted = formatted.replace(/<br>\s*([-*•]\s+)/g, '</li><li>');
+
+        // Convert numbered lists
+        formatted = formatted.replace(/<p>(\s*\d+\.\s+.*?)<\/p>/g, '<ol><li>$1</li></ol>');
+        formatted = formatted.replace(/<br>\s*(\d+\.\s+)/g, '</li><li>');
+
+        // Clean up any additional formatting issues
+        formatted = formatted.replace(/<\/ul><br><ul>/g, '');
+        formatted = formatted.replace(/<\/ol><br><ol>/g, '');
+
+        return formatted;
+      }
+
+      function addLoadingIndicator() {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'bot-message';
+        loadingDiv.innerHTML = `
+          <div class="message-bubble bot">
+            <div class="loading-dots">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+          </div>
+        `;
+        chatContent.appendChild(loadingDiv);
+        scrollToBottom();
+        return loadingDiv;
+      }
+
+      function scrollToBottom() {
+        chatContent.scrollTop = chatContent.scrollHeight;
+      }
+
+      // The generateResponse function can be kept as a fallback
+      function generateResponse(message) {
+        const lowerMessage = message.toLowerCase();
+
+        if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+          return 'Hello! How can I help with your learning today?';
+        }
+
+        if (lowerMessage.includes('math') || lowerMessage.includes('algebra') || lowerMessage.includes('equation')) {
+          return `
+            <p>I'd be happy to help with math! Here are some key concepts to remember:</p>
+            <ul class="response-list">
+              <li>Always isolate the variable when solving equations</li>
+              <li>Remember the order of operations: PEMDAS (Parentheses, Exponents, Multiplication/Division, Addition/Subtraction)</li>
+              <li>Check your work by substituting your answer back into the original equation</li>
+            </ul>
+            <p class="mt-2">Would you like me to explain a specific math concept or help solve a problem?</p>
+          `;
+        }
+
+        if (lowerMessage.includes('science') || lowerMessage.includes('physics') || lowerMessage.includes('chemistry')) {
+          return `
+            <p>Science is fascinating! Here are some resources that might help:</p>
+            <ul class="response-list">
+              <li>Khan Academy has excellent science tutorials</li>
+              <li>PhET Interactive Simulations let you experiment virtually</li>
+              <li>NASA's website has great resources for astronomy and earth science</li>
+            </ul>
+            <p class="mt-2">What specific science topic are you studying?</p>
+          `;
+        }
+
+        return `
+          <p>Thank you for your question! I'm here to help with any subject you're studying.</p>
+          <p class="mt-2">To give you the best assistance, could you provide more details about what you're working on? For example:</p>
+          <ul class="response-list">
+            <li>The specific subject or topic</li>
+            <li>Any particular concepts you're finding challenging</li>
+            <li>The grade level or course you're taking</li>
+          </ul>
+        `;
+      }
+    });
+  </script>
+</body>
+
+</html>

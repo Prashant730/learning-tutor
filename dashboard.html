@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - AI Tutoring Tool</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <style>
+    /* Base Styles */
+    :root {
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --primary-light: #ede9fe;
+      --primary-dark: #5b21b6;
+      --secondary: #e5e7eb;
+      --secondary-hover: #d1d5db;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --success: #10b981;
+      --success-hover: #059669;
+      --warning: #f59e0b;
+      --warning-hover: #d97706;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --text-lighter: #9ca3af;
+      --background: #ffffff;
+      --background-alt: #f9fafb;
+      --background-hover: #f3f4f6;
+      --border: #e5e7eb;
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --radius: 0.5rem;
+    }
+
+
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(to bottom, #f5f3ff, #e0e7ff);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      background: linear-gradient(to right, #7c3aed, #db2777);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .nav {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-link {
+      color: var(--text-light);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .nav-link:hover {
+      background-color: var(--background-hover);
+      color: var(--primary);
+    }
+
+    .nav-link.active {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    /* Dashboard */
+    .dashboard-container {
+      padding: 2rem 0;
+    }
+
+    .dashboard-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .dashboard-title {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      background: linear-gradient(to right, #7c3aed, #db2777);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: gradient 8s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    .streak-badge {
+      display: inline-flex;
+      align-items: center;
+      background-color: var(--background);
+      padding: 0.75rem 1.5rem;
+      border-radius: 9999px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .streak-emoji {
+      font-size: 1.5rem;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.1);
+      }
+    }
+
+    .streak-count {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #ef4444;
+      margin: 0 0.5rem;
+    }
+
+    .streak-text {
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--background);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+
+    .card-title svg {
+      margin-right: 0.5rem;
+      color: var(--primary);
+    }
+
+    .card-content {
+      padding: 1.5rem;
+    }
+
+    /* Calendar */
+    .calendar-month {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .calendar-day {
+      height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      cursor: pointer;
+      background-color: var(--background-hover);
+      transition: background-color 0.2s, color 0.2s;
+      user-select: none;
+    }
+
+    .calendar-day:hover {
+      background-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .calendar-day.today {
+      background-color: var(--primary-light);
+      font-weight: bold;
+    }
+
+    .calendar-day.completed {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .calendar-hint {
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--text-light);
+      margin-top: 1rem;
+    }
+
+    /* Progress */
+    .progress-circle-container {
+      position: relative;
+      width: 12rem;
+      height: 12rem;
+      margin: 0 auto 2rem auto;
+    }
+
+    .progress-circle {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+
+    .progress-circle-bg {
+      fill: transparent;
+      stroke: var(--secondary);
+      stroke-width: 10;
+    }
+
+    .progress-circle-value {
+      fill: transparent;
+      stroke: var(--primary);
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .progress-circle-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .progress-circle-percentage {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .progress-circle-label {
+      font-size: 1rem;
+      color: var(--text-light);
+    }
+
+    .subject-progress {
+      margin-bottom: 1rem;
+    }
+
+    .subject-progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .subject-progress-bar {
+      height: 0.5rem;
+      background-color: var(--secondary);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .subject-progress-value {
+      height: 100%;
+      background: linear-gradient(to right, var(--primary), #db2777);
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+    }
+
+    /* Tasks */
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .task-list {
+      margin-top: 1rem;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      border-radius: var(--radius);
+      background-color: var(--background-alt);
+      margin-bottom: 0.5rem;
+      transition: background-color 0.2s;
+    }
+
+    .task-item:hover {
+      background-color: var(--background-hover);
+    }
+
+    .task-item.completed {
+      border-left: 4px solid var(--success);
+    }
+
+    .task-item.ai-generated {
+      border-left: 4px solid var(--primary);
+      background-color: var(--primary-light);
+    }
+
+    .task-checkbox {
+      margin-right: 1rem;
+      appearance: none;
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid var(--primary);
+      border-radius: 0.25rem;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.2s;
+    }
+
+    .task-checkbox:checked {
+      background-color: var(--primary);
+    }
+
+    .task-checkbox:checked::after {
+      content: "✓";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 0.75rem;
+    }
+
+    .task-content {
+      flex: 1;
+      margin-right: 1rem;
+      transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .task-item.completed .task-content {
+      text-decoration: line-through;
+      color: var(--text-lighter);
+    }
+
+    .task-ai-badge {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--primary);
+    }
+
+    .task-ai-badge svg {
+      margin-right: 0.25rem;
+    }
+
+    .task-delete {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      transition: background-color 0.2s;
+    }
+
+    .task-delete:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+    }
+
+    .empty-tasks {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-lighter);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+      border: none;
+      font-size: 0.875rem;
+    }
+
+    .btn svg {
+      margin-right: 0.5rem;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--secondary);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--secondary-hover);
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background-color: var(--danger-hover);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background-color: var(--background);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(-20px);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-light);
+      padding: 0.25rem;
+      border-radius: 0.25rem;
+      transition: background-color 0.2s;
+    }
+
+    .modal-close:hover {
+      background-color: var(--background-hover);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--background);
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--background);
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    }
+
+    .form-radio-group {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-radio-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .form-radio {
+      margin-right: 0.5rem;
+    }
+
+    /* Floating Actions */
+    .floating-actions {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      z-index: 40;
+    }
+
+    .floating-btn {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.2s;
+    }
+
+    .floating-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .floating-btn.video {
+      background-color: var(--danger);
+    }
+
+    .floating-btn.chat {
+      background-color: var(--primary);
+    }
+
+    .floating-btn span {
+      display: none;
+    }
+
+
+
+    /* Animations */
+    @keyframes gradient {
+      0% {
+        background-position: 0% 50%;
+      }
+
+      50% {
+        background-position: 100% 50%;
+      }
+
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-25%);
+      }
+    }
+
+    .animate-bounce {
+      animation: bounce 1s infinite;
+    }
+
+    .animate-bounce-delay-1 {
+      animation: bounce 1s infinite 0.1s;
+    }
+
+    .animate-bounce-delay-2 {
+      animation: bounce 1s infinite 0.2s;
+    }
+
+    /* Loading */
+    .loading {
+      display: inline-flex;
+      gap: 0.25rem;
+    }
+
+    .loading-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      background-color: var(--primary);
+      border-radius: 50%;
+    }
+
+    .loading-dot:nth-child(1) {
+      animation: bounce 1s infinite;
+    }
+
+    .loading-dot:nth-child(2) {
+      animation: bounce 1s infinite 0.1s;
+    }
+
+    .loading-dot:nth-child(3) {
+      animation: bounce 1s infinite 0.2s;
+    }
+
+    /* Alert */
+    .alert {
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+    }
+
+    .alert-success {
+      background-color: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+
+    .alert-danger {
+      background-color: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+
+    .alert-warning {
+      background-color: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      color: var(--warning);
+    }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+      .grid-cols-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+      }
+
+      .floating-btn {
+        width: auto;
+        height: auto;
+        border-radius: var(--radius);
+        padding: 0.5rem 1rem;
+      }
+
+      .floating-btn span {
+        display: inline;
+        margin-left: 0.5rem;
+      }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border);
+      color: var(--text-light);
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">🎓 AI Tutoring Tool</div>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="login.html" class="nav-link">Login</a>
+        <a href="dashboard.html" class="nav-link active">Dashboard</a>
+        <a href="chat.html" class="nav-link">Chat</a>
+        <a href="video.html" class="nav-link">Video</a>
+      </nav>
+    </header>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+      <!-- Dashboard Header -->
+      <div class="dashboard-header">
+        <h1 class="dashboard-title">Super Kid Progress Tracker</h1>
+        <div class="streak-badge">
+          <span class="streak-emoji">🔥</span>
+          <span class="streak-count" id="streak-count">0</span>
+          <span class="streak-text">Day Streak!</span>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Content -->
+      <div class="grid-cols-2">
+        <!-- Calendar Section -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                <line x1="16" x2="16" y1="2" y2="6"></line>
+                <line x1="8" x2="8" y1="2" y2="6"></line>
+                <line x1="3" x2="21" y1="10" y2="10"></line>
+              </svg>
+              Daily Challenges
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="calendar-month" id="calendar-month"></div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+            <p class="calendar-hint">
+              Tap the days to mark completed challenges! ⭐
+            </p>
+          </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8.21 13.89 7 23l9-9-8.99-9L7.76 13.3"></path>
+                <path d="M14.92 14.92 17 23l-2.08-8.08"></path>
+                <path d="M4.73 4.73 12 12"></path>
+              </svg>
+              Task Progress
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="progress-circle-container">
+              <svg class="progress-circle" viewBox="0 0 100 100">
+                <circle class="progress-circle-bg" cx="50" cy="50" r="40"></circle>
+                <circle class="progress-circle-value" cx="50" cy="50" r="40" id="progress-circle-value"></circle>
+              </svg>
+              <div class="progress-circle-text">
+                <div class="progress-circle-percentage" id="progress-percentage">0%</div>
+                <div class="progress-circle-label">Tasks Done!</div>
+              </div>
+            </div>
+
+            <div class="subject-progress">
+              <div class="subject-progress-header">
+                <span>Reading</span>
+                <span id="reading-percentage">0%</span>
+              </div>
+              <div class="subject-progress-bar">
+                <div class="subject-progress-value" id="reading-progress" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="subject-progress">
+              <div class="subject-progress-header">
+                <span>Math</span>
+                <span id="math-percentage">0%</span>
+              </div>
+              <div class="subject-progress-bar">
+                <div class="subject-progress-value" id="math-progress" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="subject-progress">
+              <div class="subject-progress-header">
+                <span>Science</span>
+                <span id="science-percentage">0%</span>
+              </div>
+              <div class="subject-progress-bar">
+                <div class="subject-progress-value" id="science-progress" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Management Section -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20V10"></path>
+              <path d="M18 20V4"></path>
+              <path d="M6 20v-4"></path>
+            </svg>
+            Today's Awesome Tasks
+          </div>
+          <div class="task-actions">
+            <button id="ai-tasks-btn" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <circle cx="18" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
+                <path d="M11 18H8a2 2 0 0 1-2-2V9"></path>
+              </svg>
+              AI Tasks
+            </button>
+            <button id="add-task-btn" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
+              </svg>
+              Add Task
+            </button>
+          </div>
+        </div>
+        <div class="card-content">
+          <div id="task-list" class="task-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>&copy; <span id="current-year"></span> AI Tutoring Tool. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <!-- Floating Action Buttons -->
+  <div class="floating-actions">
+    <a href="video.html" class="floating-btn video">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+        <path d="m22 8-6 4 6 4V8Z"></path>
+        <rect width="14" height="12" x="2" y="6" rx="2" ry="2"></rect>
+      </svg>
+      <span>Video Call</span>
+    </a>
+    <a href="chat.html" class="floating-btn chat">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <span>Chat Buddy</span>
+    </a>
+  </div>
+
+  <!-- AI Tasks Modal -->
+  <div id="ai-tasks-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Generate AI Learning Tasks</h3>
+        <button class="modal-close" id="ai-tasks-close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="ai-tasks-alert" class="alert alert-danger hidden"></div>
+
+        <div class="form-group">
+          <label class="form-label">Subject Type</label>
+          <div class="form-radio-group">
+            <div class="form-radio-item">
+              <input type="radio" id="predefined" name="subject-type" value="predefined" class="form-radio" checked>
+              <label for="predefined">Choose from list</label>
+            </div>
+            <div class="form-radio-item">
+              <input type="radio" id="custom" name="subject-type" value="custom" class="form-radio">
+              <label for="custom">Custom subject</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="predefined-subject" class="form-group">
+          <label for="subject" class="form-label">Subject</label>
+          <select id="subject" class="form-select">
+            <option value="math">Mathematics</option>
+            <option value="science">Science</option>
+            <option value="english">English</option>
+            <option value="history">History</option>
+            <option value="art">Art</option>
+            <option value="music">Music</option>
+            <option value="programming">Programming</option>
+          </select>
+        </div>
+
+        <div id="custom-subject" class="form-group hidden">
+          <label for="custom-subject-input" class="form-label">Custom Subject</label>
+          <input type="text" id="custom-subject-input" class="form-input" placeholder="Enter any subject or topic...">
+        </div>
+
+        <div class="form-group">
+          <label for="difficulty" class="form-label">Difficulty</label>
+          <select id="difficulty" class="form-select">
+            <option value="beginner">Beginner</option>
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="challenging">Challenging</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="count" class="form-label">Number of Tasks</label>
+          <select id="count" class="form-select">
+            <option value="1">1 Task</option>
+            <option value="2">2 Tasks</option>
+            <option value="3" selected>3 Tasks</option>
+            <option value="5">5 Tasks</option>
+            <option value="10">10 Tasks</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="generate-tasks-btn" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+            <path
+              d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z">
+            </path>
+            <path d="M5 3v4"></path>
+            <path d="M19 17v4"></path>
+            <path d="M3 5h4"></path>
+            <path d="M17 19h4"></path>
+          </svg>
+          Generate Tasks
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div id="add-task-modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Add New Task</h3>
+        <button class="modal-close" id="add-task-close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="task-text" class="form-label">Task Description</label>
+          <input type="text" id="task-text" class="form-input" placeholder="Enter task description...">
+        </div>
+
+        <div class="form-group">
+          <label for="task-subject" class="form-label">Subject</label>
+          <select id="task-subject" class="form-select">
+            <option value="general">General</option>
+            <option value="math">Mathematics</option>
+            <option value="science">Science</option>
+            <option value="reading">Reading</option>
+            <option value="writing">Writing</option>
+            <option value="history">History</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="add-task-submit" class="btn btn-primary">Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+
+
+
+    // Set current year in footer
+    document.getElementById('current-year').textContent = new Date().getFullYear();
+
+    // Dashboard functionality
+    document.addEventListener('DOMContentLoaded', function () {
+      // DOM Elements
+      const taskList = document.getElementById('task-list');
+      const addTaskBtn = document.getElementById('add-task-btn');
+      const aiTasksBtn = document.getElementById('ai-tasks-btn');
+      const addTaskModal = document.getElementById('add-task-modal');
+      const aiTasksModal = document.getElementById('ai-tasks-modal');
+      const addTaskClose = document.getElementById('add-task-close');
+      const aiTasksClose = document.getElementById('ai-tasks-close');
+      const addTaskSubmit = document.getElementById('add-task-submit');
+      const generateTasksBtn = document.getElementById('generate-tasks-btn');
+      const taskText = document.getElementById('task-text');
+      const taskSubject = document.getElementById('task-subject');
+      const subjectType = document.getElementsByName('subject-type');
+      const predefinedSubjectDiv = document.getElementById('predefined-subject');
+      const customSubjectDiv = document.getElementById('custom-subject');
+      const subject = document.getElementById('subject');
+      const customSubjectInput = document.getElementById('custom-subject-input');
+      const difficulty = document.getElementById('difficulty');
+      const count = document.getElementById('count');
+      const aiTasksAlert = document.getElementById('ai-tasks-alert');
+      const progressCircleValue = document.getElementById('progress-circle-value');
+      const progressPercentage = document.getElementById('progress-percentage');
+      const readingProgress = document.getElementById('reading-progress');
+      const mathProgress = document.getElementById('math-progress');
+      const scienceProgress = document.getElementById('science-progress');
+      const readingPercentage = document.getElementById('reading-percentage');
+      const mathPercentage = document.getElementById('math-percentage');
+      const sciencePercentage = document.getElementById('science-percentage');
+      const calendarGrid = document.getElementById('calendar-grid');
+      const calendarMonth = document.getElementById('calendar-month');
+      const streakCount = document.getElementById('streak-count');
+
+      // State
+      let tasks = loadTasks();
+      let completedDates = loadCompletedDates();
+      let isGeneratingTasks = false;
+
+      // Initialize
+      renderTasks();
+      renderCalendar();
+      updateProgress();
+      updateStreak();
+
+      // Event Listeners
+      addTaskBtn.addEventListener('click', () => {
+        addTaskModal.classList.add('active');
+      });
+
+      aiTasksBtn.addEventListener('click', () => {
+        aiTasksModal.classList.add('active');
+      });
+
+      addTaskClose.addEventListener('click', () => {
+        addTaskModal.classList.remove('active');
+      });
+
+      aiTasksClose.addEventListener('click', () => {
+        aiTasksModal.classList.remove('active');
+      });
+
+      addTaskSubmit.addEventListener('click', () => {
+        if (taskText.value.trim()) {
+          addTask(taskText.value.trim(), taskSubject.value);
+          taskText.value = '';
+          addTaskModal.classList.remove('active');
+        }
+      });
+
+      generateTasksBtn.addEventListener('click', generateAITasks);
+
+      // Subject type radio buttons
+      subjectType.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (radio.value === 'predefined') {
+            predefinedSubjectDiv.classList.remove('hidden');
+            customSubjectDiv.classList.add('hidden');
+          } else {
+            predefinedSubjectDiv.classList.add('hidden');
+            customSubjectDiv.classList.remove('hidden');
+          }
+        });
+      });
+
+      // Functions
+      function loadTasks() {
+        const savedTasks = localStorage.getItem('tasks');
+        return savedTasks ? JSON.parse(savedTasks) : [
+          { id: 1, text: 'Read for 20 minutes', completed: false, subject: 'reading' },
+          { id: 2, text: 'Solve 5 math problems', completed: false, subject: 'math' },
+          { id: 3, text: 'Draw a picture', completed: false, subject: 'art' }
+        ];
+      }
+
+      function saveTasks() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+      }
+
+      function loadCompletedDates() {
+        const savedDates = localStorage.getItem('completedDates');
+        return savedDates ? JSON.parse(savedDates) : [];
+      }
+
+      function saveCompletedDates() {
+        localStorage.setItem('completedDates', JSON.stringify(completedDates));
+      }
+
+      function renderTasks() {
+        taskList.innerHTML = '';
+
+        if (tasks.length === 0) {
+          taskList.innerHTML = '<div class="empty-tasks">No tasks yet. Click "Add Task" or "AI Tasks" to create one!</div>';
+          return;
+        }
+
+        tasks.forEach(task => {
+          const taskItem = document.createElement('div');
+          taskItem.className = `task-item ${task.completed ? 'completed' : ''} ${task.isAIGenerated ? 'ai-generated' : ''}`;
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'task-checkbox';
+          checkbox.checked = task.completed;
+          checkbox.addEventListener('change', () => toggleTaskCompletion(task.id));
+
+          const content = document.createElement('div');
+          content.className = 'task-content';
+          content.textContent = task.text;
+
+          if (task.isAIGenerated) {
+            const aiBadge = document.createElement('span');
+            aiBadge.className = 'task-ai-badge';
+            aiBadge.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+              </svg>
+              AI
+            `;
+            content.appendChild(aiBadge);
+          }
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'task-delete';
+          deleteBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+            </svg>
+          `;
+          deleteBtn.addEventListener('click', () => removeTask(task.id));
+
+          taskItem.appendChild(checkbox);
+          taskItem.appendChild(content);
+          taskItem.appendChild(deleteBtn);
+
+          taskList.appendChild(taskItem);
+        });
+      }
+
+      function addTask(text, subject, isAIGenerated = false) {
+        const newTask = {
+          id: Date.now(),
+          text,
+          completed: false,
+          subject,
+          isAIGenerated
+        };
+
+        tasks.push(newTask);
+        saveTasks();
+        renderTasks();
+        updateProgress();
+      }
+
+      function removeTask(id) {
+        tasks = tasks.filter(task => task.id !== id);
+        saveTasks();
+        renderTasks();
+        updateProgress();
+      }
+
+      function toggleTaskCompletion(id) {
+        tasks = tasks.map(task => {
+          if (task.id === id) {
+            return { ...task, completed: !task.completed };
+          }
+          return task;
+        });
+
+        saveTasks();
+        renderTasks();
+        updateProgress();
+      }
+
+      function updateProgress() {
+        // Overall progress
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(task => task.completed).length;
+        const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+        // Update progress circle
+        const circumference = 2 * Math.PI * 40;
+        progressCircleValue.style.strokeDasharray = circumference;
+        progressCircleValue.style.strokeDashoffset = circumference * (1 - progress / 100);
+        progressPercentage.textContent = `${progress}%`;
+
+        // Subject progress
+        const subjects = {
+          reading: { total: 0, completed: 0 },
+          math: { total: 0, completed: 0 },
+          science: { total: 0, completed: 0 }
+        };
+
+        tasks.forEach(task => {
+          if (subjects[task.subject]) {
+            subjects[task.subject].total++;
+            if (task.completed) {
+              subjects[task.subject].completed++;
+            }
+          }
+        });
+
+        // Update subject progress bars
+        for (const [subject, data] of Object.entries(subjects)) {
+          const percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+
+          if (subject === 'reading') {
+            readingProgress.style.width = `${percentage}%`;
+            readingPercentage.textContent = `${percentage}%`;
+          } else if (subject === 'math') {
+            mathProgress.style.width = `${percentage}%`;
+            mathPercentage.textContent = `${percentage}%`;
+          } else if (subject === 'science') {
+            scienceProgress.style.width = `${percentage}%`;
+            sciencePercentage.textContent = `${percentage}%`;
+          }
+        }
+      }
+
+      function renderCalendar() {
+        const today = new Date();
+        const currentMonth = today.toLocaleString('default', { month: 'long' });
+        const currentYear = today.getFullYear();
+
+        calendarMonth.textContent = `${currentMonth} ${currentYear}`;
+
+        // Clear calendar grid
+        calendarGrid.innerHTML = '';
+
+        // Generate calendar days
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+        for (let i = 1; i <= daysInMonth; i++) {
+          const date = new Date(today.getFullYear(), today.getMonth(), i);
+          const dateString = date.toISOString().split('T')[0];
+          const isToday = i === today.getDate();
+          const isCompleted = completedDates.includes(dateString);
+
+          const dayElement = document.createElement('div');
+          dayElement.className = `calendar-day ${isToday ? 'today' : ''} ${isCompleted ? 'completed' : ''}`;
+          dayElement.textContent = i;
+
+          if (isToday) {
+            dayElement.textContent += ' 🎯';
+          }
+
+          dayElement.addEventListener('click', () => toggleDateCompletion(dateString));
+
+          calendarGrid.appendChild(dayElement);
+        }
+      }
+
+      function toggleDateCompletion(dateString) {
+        if (completedDates.includes(dateString)) {
+          completedDates = completedDates.filter(date => date !== dateString);
+        } else {
+          completedDates.push(dateString);
+        }
+
+        saveCompletedDates();
+        renderCalendar();
+        updateStreak();
+      }
+
+      function updateStreak() {
+        // Sort dates
+        const sortedDates = [...completedDates].sort();
+
+        // Calculate streak
+        let currentStreak = 0;
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+        // Check if today or yesterday is completed to maintain streak
+        const hasRecentActivity = completedDates.includes(today) || completedDates.includes(yesterday);
+
+        if (!hasRecentActivity) {
+          streakCount.textContent = '0';
+          return;
+        }
+
+        // Count consecutive days
+        let checkDate = new Date();
+
+        while (true) {
+          const dateString = checkDate.toISOString().split('T')[0];
+
+          if (completedDates.includes(dateString)) {
+            currentStreak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+
+        streakCount.textContent = currentStreak.toString();
+      }
+
+      async function generateAITasks() {
+        // Validate inputs
+        const useCustomSubject = document.getElementById('custom').checked;
+        const subjectValue = useCustomSubject ? customSubjectInput.value.trim() : subject.value;
+        const difficultyValue = difficulty.value;
+        const countValue = parseInt(count.value);
+
+        if (useCustomSubject && !subjectValue) {
+          aiTasksAlert.textContent = 'Please enter a custom subject';
+          aiTasksAlert.classList.remove('hidden');
+          return;
+        }
+
+        // Show loading state
+        isGeneratingTasks = true;
+        generateTasksBtn.disabled = true;
+        generateTasksBtn.innerHTML = `
+          <div class="loading">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+          </div>
+          Generating...
+        `;
+
+        aiTasksAlert.classList.add('hidden');
+
+        try {
+          // Simulate API call with a delay
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Generate AI tasks based on inputs
+          const aiTasks = generateSimulatedAITasks(subjectValue, difficultyValue, countValue);
+
+          // Add tasks to the list
+          aiTasks.forEach(taskText => {
+            addTask(taskText, mapSubjectToCategory(subjectValue), true);
+          });
+
+          // Close modal
+          aiTasksModal.classList.remove('active');
+
+          // Show success message
+          const successAlert = document.createElement('div');
+          successAlert.className = 'alert alert-success';
+          successAlert.textContent = `Successfully generated ${countValue} tasks!`;
+          document.querySelector('.dashboard-container').prepend(successAlert);
+
+          // Remove success message after 3 seconds
+          setTimeout(() => {
+            successAlert.remove();
+          }, 3000);
+        } catch (error) {
+          aiTasksAlert.textContent = error.message || 'Failed to generate tasks';
+          aiTasksAlert.classList.remove('hidden');
+        } finally {
+          // Reset loading state
+          isGeneratingTasks = false;
+          generateTasksBtn.disabled = false;
+          generateTasksBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+              <path d="M5 3v4"></path>
+              <path d="M19 17v4"></path>
+              <path d="M3 5h4"></path>
+              <path d="M17 19h4"></path>
+            </svg>
+            Generate Tasks
+          `;
+        }
+      }
+
+      function generateSimulatedAITasks(subject, difficulty, count) {
+        // Predefined tasks by subject and difficulty
+        const taskTemplates = {
+          math: {
+            beginner: [
+              "Count from 1 to 20 and write the numbers down",
+              "Practice addition with numbers 1-10",
+              "Draw shapes and identify them: circle, square, triangle",
+              "Count objects in your room and record the total",
+              "Sort objects by size from smallest to largest"
+            ],
+            easy: [
+              "Solve 5 addition problems with numbers up to 20",
+              "Practice subtraction with numbers 1-20",
+              "Identify and draw 2D shapes: rectangle, oval, hexagon",
+              "Count by 2s up to 50",
+              "Solve simple word problems involving addition"
+            ],
+            medium: [
+              "Practice multiplication tables 1-5",
+              "Solve 10 division problems with numbers up to 50",
+              "Calculate the perimeter of different rectangles",
+              "Convert fractions to decimals (simple examples)",
+              "Solve word problems involving money"
+            ],
+            challenging: [
+              "Practice long division with remainders",
+              "Solve equations with variables on both sides",
+              "Calculate the area and perimeter of composite shapes",
+              "Work with fractions: addition and subtraction with different denominators",
+              "Solve multi-step word problems involving percentages"
+            ],
+            advanced: [
+              "Solve quadratic equations using the quadratic formula",
+              "Work with trigonometric functions: sine, cosine, tangent",
+              "Calculate the volume and surface area of 3D shapes",
+              "Solve systems of linear equations",
+              "Work with logarithmic and exponential functions"
+            ]
+          },
+          science: {
+            beginner: [
+              "Observe and draw the weather for 5 days",
+              "Identify 5 different plants in your neighborhood",
+              "Sort objects by whether they sink or float in water",
+              "Observe and record the daily movement of the sun",
+              "Identify the basic parts of a plant"
+            ],
+            easy: [
+              "Create a simple food chain with 4 organisms",
+              "Observe and record the phases of the moon for a week",
+              "Classify animals into groups: mammals, birds, reptiles, etc.",
+              "Conduct a simple experiment about plant growth",
+              "Learn about the water cycle and create a diagram"
+            ],
+            medium: [
+              "Build a simple electric circuit",
+              "Research and create a model of the solar system",
+              "Conduct an experiment about forces and motion",
+              "Learn about the human digestive system and create a diagram",
+              "Investigate the properties of different materials"
+            ],
+            challenging: [
+              "Design and conduct an experiment about photosynthesis",
+              "Research and explain Newton's laws of motion with examples",
+              "Create a detailed model of a cell and label its parts",
+              "Investigate chemical reactions and write balanced equations",
+              "Research and explain the greenhouse effect and climate change"
+            ],
+            advanced: [
+              "Design and conduct an experiment about enzyme activity",
+              "Research and explain quantum mechanics concepts",
+              "Analyze genetic inheritance patterns using Punnett squares",
+              "Investigate electrochemistry and build a simple battery",
+              "Research and explain the theory of relativity"
+            ]
+          },
+          english: {
+            beginner: [
+              "Practice writing the alphabet in uppercase and lowercase",
+              "Read a short story and draw a picture about it",
+              "Practice spelling 5 simple three-letter words",
+              "Identify rhyming words in a nursery rhyme",
+              "Practice writing your name and address"
+            ],
+            easy: [
+              "Read a short book and identify the main character",
+              "Write 3 sentences about your favorite animal",
+              "Practice spelling 10 common words",
+              "Identify nouns and verbs in simple sentences",
+              "Write a thank-you note to someone"
+            ],
+            medium: [
+              "Read a chapter book and write a short summary",
+              "Write a paragraph describing your favorite place",
+              "Identify and use adjectives and adverbs in sentences",
+              "Practice using punctuation correctly in writing",
+              "Write a simple poem using rhyming words"
+            ],
+            challenging: [
+              "Read a novel and analyze the main character's development",
+              "Write a five-paragraph essay on a topic of your choice",
+              "Identify and use figurative language in writing",
+              "Analyze the theme of a story or poem",
+              "Research and write a report on a historical figure"
+            ],
+            advanced: [
+              "Analyze complex literary works and write a critical essay",
+              "Research and write a persuasive essay with proper citations",
+              "Create an original short story with well-developed characters and plot",
+              "Compare and contrast different literary movements or authors",
+              "Analyze rhetorical strategies in speeches or articles"
+            ]
+          },
+          history: {
+            beginner: [
+              "Draw a timeline of your day with 5 events",
+              "Learn about a historical figure and draw their portrait",
+              "Identify and learn about 3 important holidays",
+              "Create a family tree with your immediate family",
+              "Learn about your community's history"
+            ],
+            easy: [
+              "Create a timeline of your life with 10 important events",
+              "Research and write 5 facts about an ancient civilization",
+              "Learn about a historical event and draw a picture about it",
+              "Interview an older family member about their childhood",
+              "Learn about the history of your state or region"
+            ],
+            medium: [
+              "Create a timeline of major events in your country's history",
+              "Research and write a one-page report on an ancient civilization",
+              "Compare life today with life 100 years ago",
+              "Learn about a significant historical event and its impact",
+              "Research the history of an invention and how it changed society"
+            ],
+            challenging: [
+              "Research and analyze a major historical event and its causes",
+              "Compare and contrast two different historical periods",
+              "Analyze primary source documents from a historical period",
+              "Research and explain how geography influenced a civilization",
+              "Create a detailed timeline of a historical period with analysis"
+            ],
+            advanced: [
+              "Analyze the causes and effects of a major historical conflict",
+              "Research and write a paper on historiography of a specific event",
+              "Compare different historical interpretations of the same event",
+              "Analyze the influence of economic factors on historical developments",
+              "Research and explain the development of political systems through history"
+            ]
+          },
+          programming: {
+            beginner: [
+              "Learn about what a computer program is",
+              "Create a simple flowchart for an everyday task",
+              "Learn basic computer terminology",
+              "Practice typing skills for 15 minutes",
+              "Learn what algorithms are with simple examples"
+            ],
+            easy: [
+              "Write pseudocode for a simple calculator",
+              "Learn about variables and data types",
+              "Create a simple program that prints 'Hello, World!'",
+              "Learn about conditional statements (if/else)",
+              "Create a program that asks for user input and responds"
+            ],
+            medium: [
+              "Create a program that uses loops to solve a problem",
+              "Build a simple calculator program",
+              "Learn about arrays and create a program using them",
+              "Create a program that reads and writes to a file",
+              "Build a simple game like rock-paper-scissors"
+            ],
+            challenging: [
+              "Create a program that uses functions/methods effectively",
+              "Build a program that uses object-oriented programming concepts",
+              "Create a simple web page with HTML, CSS, and JavaScript",
+              "Build a program that uses APIs to fetch data",
+              "Create a database and connect it to a program"
+            ],
+            advanced: [
+              "Build a full-stack web application with user authentication",
+              "Create a mobile app with multiple screens and features",
+              "Implement advanced algorithms like sorting or pathfinding",
+              "Build a program that uses machine learning concepts",
+              "Create a program that uses parallel processing or multithreading"
+            ]
+          }
+        };
+
+        // For custom subjects, generate generic tasks
+        if (!taskTemplates[subject]) {
+          return generateGenericTasks(subject, difficulty, count);
+        }
+
+        // Get tasks for the specified subject and difficulty
+        const availableTasks = taskTemplates[subject][difficulty] || taskTemplates[subject].medium;
+
+        // Randomly select the requested number of tasks
+        const selectedTasks = [];
+        const tasksCopy = [...availableTasks];
+
+        for (let i = 0; i < count && tasksCopy.length > 0; i++) {
+          const randomIndex = Math.floor(Math.random() * tasksCopy.length);
+          selectedTasks.push(tasksCopy[randomIndex]);
+          tasksCopy.splice(randomIndex, 1);
+        }
+
+        return selectedTasks;
+      }
+
+      function generateGenericTasks(subject, difficulty, count) {
+        // Generic task templates that can be adapted to any subject
+        const genericTemplates = {
+          beginner: [
+            `Learn 5 basic facts about ${subject}`,
+            `Draw a picture related to ${subject}`,
+            `Find and write down 3 interesting things about ${subject}`,
+            `Watch a beginner video about ${subject}`,
+            `Create a simple vocabulary list for ${subject}`
+          ],
+          easy: [
+            `Read a short article about ${subject} and summarize it`,
+            `Create a mind map of basic ${subject} concepts`,
+            `Practice ${subject} skills for 15 minutes`,
+            `Find and solve 3 simple ${subject} problems`,
+            `Create flashcards for ${subject} terminology`
+          ],
+          medium: [
+            `Research and write a one-page report on an aspect of ${subject}`,
+            `Create a presentation about an interesting ${subject} topic`,
+            `Practice intermediate ${subject} skills for 30 minutes`,
+            `Find and solve 5 medium-difficulty ${subject} problems`,
+            `Teach someone else a concept from ${subject}`
+          ],
+          challenging: [
+            `Research and analyze a complex topic in ${subject}`,
+            `Create a detailed project related to ${subject}`,
+            `Practice advanced ${subject} skills for 45 minutes`,
+            `Find and solve challenging ${subject} problems`,
+            `Compare different approaches or theories in ${subject}`
+          ],
+          advanced: [
+            `Conduct in-depth research on a specialized area of ${subject}`,
+            `Create an original contribution to ${subject}`,
+            `Practice expert-level ${subject} skills for 1 hour`,
+            `Analyze and critique advanced concepts in ${subject}`,
+            `Integrate ${subject} with another field in a meaningful way`
+          ]
+        };
+
+        // Get tasks for the specified difficulty
+        const availableTasks = genericTemplates[difficulty] || genericTemplates.medium;
+
+        // Randomly select the requested number of tasks
+        const selectedTasks = [];
+        const tasksCopy = [...availableTasks];
+
+        for (let i = 0; i < count && tasksCopy.length > 0; i++) {
+          const randomIndex = Math.floor(Math.random() * tasksCopy.length);
+          selectedTasks.push(tasksCopy[randomIndex]);
+          tasksCopy.splice(randomIndex, 1);
+        }
+
+        return selectedTasks;
+      }
+
+      function mapSubjectToCategory(subject) {
+        // Map subject to one of our progress categories
+        const subjectMap = {
+          math: 'math',
+          mathematics: 'math',
+          algebra: 'math',
+          geometry: 'math',
+          calculus: 'math',
+
+          science: 'science',
+          physics: 'science',
+          chemistry: 'science',
+          biology: 'science',
+
+          english: 'reading',
+          reading: 'reading',
+          literature: 'reading',
+          writing: 'reading',
+
+          history: 'reading',
+          geography: 'reading',
+
+          programming: 'math',
+          coding: 'math',
+          computer: 'math'
+        };
+
+        // Convert to lowercase for case-insensitive matching
+        const lowerSubject = subject.toLowerCase();
+
+        // Return mapped category or default to 'general'
+        for (const [key, value] of Object.entries(subjectMap)) {
+          if (lowerSubject.includes(key)) {
+            return value;
+          }
+        }
+
+        return 'general';
+      }
+
+      // Close modals when clicking outside
+      window.addEventListener('click', (e) => {
+        if (e.target === addTaskModal) {
+          addTaskModal.classList.remove('active');
+        }
+        if (e.target === aiTasksModal) {
+          aiTasksModal.classList.remove('active');
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>
