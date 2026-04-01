@@ -777,6 +777,8 @@
         <a href="dashboard.html" class="nav-link active">Dashboard</a>
         <a href="chat.html" class="nav-link">Chat</a>
         <a href="video.html" class="nav-link">Video</a>
+        <span id="nav-user-name" style="color:#7c3aed;font-weight:600;padding:0.5rem;"></span>
+        <button onclick="Auth.logout()" class="nav-link" style="cursor:pointer;background:none;border:none;color:#ef4444;font-weight:500;">Logout</button>
       </nav>
     </header>
 
@@ -1064,722 +1066,246 @@
     </div>
   </div>
 
+  <script src="api.js"></script>
   <script>
-
-
-
-
-    // Set current year in footer
     document.getElementById('current-year').textContent = new Date().getFullYear();
 
-    // Dashboard functionality
-    document.addEventListener('DOMContentLoaded', function () {
-      // DOM Elements
-      const taskList = document.getElementById('task-list');
-      const addTaskBtn = document.getElementById('add-task-btn');
-      const aiTasksBtn = document.getElementById('ai-tasks-btn');
-      const addTaskModal = document.getElementById('add-task-modal');
-      const aiTasksModal = document.getElementById('ai-tasks-modal');
-      const addTaskClose = document.getElementById('add-task-close');
-      const aiTasksClose = document.getElementById('ai-tasks-close');
-      const addTaskSubmit = document.getElementById('add-task-submit');
+    document.addEventListener('DOMContentLoaded', async function () {
+      if (!requireAuth()) return;
+
+      // ── DOM refs ──────────────────────────────────────────────────────────
+      const taskListEl       = document.getElementById('task-list');
+      const addTaskBtn       = document.getElementById('add-task-btn');
+      const aiTasksBtn       = document.getElementById('ai-tasks-btn');
+      const addTaskModal     = document.getElementById('add-task-modal');
+      const aiTasksModal     = document.getElementById('ai-tasks-modal');
+      const addTaskClose     = document.getElementById('add-task-close');
+      const aiTasksClose     = document.getElementById('ai-tasks-close');
+      const addTaskSubmit    = document.getElementById('add-task-submit');
       const generateTasksBtn = document.getElementById('generate-tasks-btn');
-      const taskText = document.getElementById('task-text');
-      const taskSubject = document.getElementById('task-subject');
-      const subjectType = document.getElementsByName('subject-type');
-      const predefinedSubjectDiv = document.getElementById('predefined-subject');
-      const customSubjectDiv = document.getElementById('custom-subject');
-      const subject = document.getElementById('subject');
-      const customSubjectInput = document.getElementById('custom-subject-input');
-      const difficulty = document.getElementById('difficulty');
-      const count = document.getElementById('count');
-      const aiTasksAlert = document.getElementById('ai-tasks-alert');
-      const progressCircleValue = document.getElementById('progress-circle-value');
-      const progressPercentage = document.getElementById('progress-percentage');
-      const readingProgress = document.getElementById('reading-progress');
-      const mathProgress = document.getElementById('math-progress');
-      const scienceProgress = document.getElementById('science-progress');
-      const readingPercentage = document.getElementById('reading-percentage');
-      const mathPercentage = document.getElementById('math-percentage');
-      const sciencePercentage = document.getElementById('science-percentage');
-      const calendarGrid = document.getElementById('calendar-grid');
-      const calendarMonth = document.getElementById('calendar-month');
-      const streakCount = document.getElementById('streak-count');
+      const taskText         = document.getElementById('task-text');
+      const taskSubject      = document.getElementById('task-subject');
+      const subjectType      = document.getElementsByName('subject-type');
+      const predefinedDiv    = document.getElementById('predefined-subject');
+      const customDiv        = document.getElementById('custom-subject');
+      const subjectEl        = document.getElementById('subject');
+      const customInput      = document.getElementById('custom-subject-input');
+      const difficultyEl     = document.getElementById('difficulty');
+      const countEl          = document.getElementById('count');
+      const aiAlert          = document.getElementById('ai-tasks-alert');
+      const progressCircle   = document.getElementById('progress-circle-value');
+      const progressPct      = document.getElementById('progress-percentage');
+      const calendarGrid     = document.getElementById('calendar-grid');
+      const calendarMonth    = document.getElementById('calendar-month');
+      const streakCountEl    = document.getElementById('streak-count');
 
-      // State
-      let tasks = loadTasks();
-      let completedDates = loadCompletedDates();
-      let isGeneratingTasks = false;
+      // ── State ─────────────────────────────────────────────────────────────
+      let tasks = [];
+      let completedDates = [];
 
-      // Initialize
-      renderTasks();
-      renderCalendar();
-      updateProgress();
-      updateStreak();
+      // ── Load from server ──────────────────────────────────────────────────
+      async function loadAll() {
+        try {
+          const [taskRes, dateRes] = await Promise.all([Tasks.getAll(), Tasks.getDates()]);
+          tasks = taskRes.tasks;
+          completedDates = dateRes.dates;
+          renderTasks();
+          renderCalendar();
+          updateProgress();
+          updateStreak();
+        } catch (err) {
+          console.error('Load error:', err);
+        }
+      }
 
-      // Event Listeners
-      addTaskBtn.addEventListener('click', () => {
-        addTaskModal.classList.add('active');
+      await loadAll();
+
+      // ── Modal controls ────────────────────────────────────────────────────
+      addTaskBtn.addEventListener('click', () => addTaskModal.classList.add('active'));
+      aiTasksBtn.addEventListener('click', () => aiTasksModal.classList.add('active'));
+      addTaskClose.addEventListener('click', () => addTaskModal.classList.remove('active'));
+      aiTasksClose.addEventListener('click', () => aiTasksModal.classList.remove('active'));
+      window.addEventListener('click', e => {
+        if (e.target === addTaskModal) addTaskModal.classList.remove('active');
+        if (e.target === aiTasksModal) aiTasksModal.classList.remove('active');
       });
 
-      aiTasksBtn.addEventListener('click', () => {
-        aiTasksModal.classList.add('active');
-      });
+      subjectType.forEach(r => r.addEventListener('change', () => {
+        predefinedDiv.classList.toggle('hidden', r.value === 'custom' && r.checked);
+        customDiv.classList.toggle('hidden', r.value === 'predefined' && r.checked);
+        if (r.value === 'custom' && r.checked) { predefinedDiv.classList.add('hidden'); customDiv.classList.remove('hidden'); }
+        if (r.value === 'predefined' && r.checked) { customDiv.classList.add('hidden'); predefinedDiv.classList.remove('hidden'); }
+      }));
 
-      addTaskClose.addEventListener('click', () => {
-        addTaskModal.classList.remove('active');
-      });
-
-      aiTasksClose.addEventListener('click', () => {
-        aiTasksModal.classList.remove('active');
-      });
-
-      addTaskSubmit.addEventListener('click', () => {
-        if (taskText.value.trim()) {
-          addTask(taskText.value.trim(), taskSubject.value);
+      // ── Add task ──────────────────────────────────────────────────────────
+      addTaskSubmit.addEventListener('click', async () => {
+        if (!taskText.value.trim()) return;
+        try {
+          const res = await Tasks.create(taskText.value.trim(), taskSubject.value);
+          tasks.push(res.task);
           taskText.value = '';
           addTaskModal.classList.remove('active');
-        }
+          renderTasks();
+          updateProgress();
+        } catch (err) { alert(err.message); }
       });
 
-      generateTasksBtn.addEventListener('click', generateAITasks);
-
-      // Subject type radio buttons
-      subjectType.forEach(radio => {
-        radio.addEventListener('change', () => {
-          if (radio.value === 'predefined') {
-            predefinedSubjectDiv.classList.remove('hidden');
-            customSubjectDiv.classList.add('hidden');
-          } else {
-            predefinedSubjectDiv.classList.add('hidden');
-            customSubjectDiv.classList.remove('hidden');
-          }
-        });
-      });
-
-      // Functions
-      function loadTasks() {
-        const savedTasks = localStorage.getItem('tasks');
-        return savedTasks ? JSON.parse(savedTasks) : [
-          { id: 1, text: 'Read for 20 minutes', completed: false, subject: 'reading' },
-          { id: 2, text: 'Solve 5 math problems', completed: false, subject: 'math' },
-          { id: 3, text: 'Draw a picture', completed: false, subject: 'art' }
-        ];
-      }
-
-      function saveTasks() {
-        localStorage.setItem('tasks', JSON.stringify(tasks));
-      }
-
-      function loadCompletedDates() {
-        const savedDates = localStorage.getItem('completedDates');
-        return savedDates ? JSON.parse(savedDates) : [];
-      }
-
-      function saveCompletedDates() {
-        localStorage.setItem('completedDates', JSON.stringify(completedDates));
-      }
-
-      function renderTasks() {
-        taskList.innerHTML = '';
-
-        if (tasks.length === 0) {
-          taskList.innerHTML = '<div class="empty-tasks">No tasks yet. Click "Add Task" or "AI Tasks" to create one!</div>';
+      // ── Generate AI tasks (simulated, same logic as before) ───────────────
+      generateTasksBtn.addEventListener('click', async () => {
+        const useCustom = document.getElementById('custom').checked;
+        const subjectVal = useCustom ? customInput.value.trim() : subjectEl.value;
+        if (useCustom && !subjectVal) {
+          aiAlert.textContent = 'Please enter a custom subject';
+          aiAlert.classList.remove('hidden');
           return;
         }
+        aiAlert.classList.add('hidden');
+        generateTasksBtn.disabled = true;
+        generateTasksBtn.innerHTML = '<div class="loading"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div> Generating...';
 
+        await new Promise(r => setTimeout(r, 1200));
+        const generated = generateSimulatedAITasks(subjectVal, difficultyEl.value, parseInt(countEl.value));
+
+        for (const text of generated) {
+          try {
+            const res = await Tasks.create(text, mapSubjectToCategory(subjectVal), true);
+            tasks.push(res.task);
+          } catch {}
+        }
+
+        renderTasks();
+        updateProgress();
+        aiTasksModal.classList.remove('active');
+        generateTasksBtn.disabled = false;
+        generateTasksBtn.innerHTML = '✨ Generate Tasks';
+      });
+
+      // ── Render tasks ──────────────────────────────────────────────────────
+      function renderTasks() {
+        taskListEl.innerHTML = '';
+        if (!tasks.length) {
+          taskListEl.innerHTML = '<div class="empty-tasks">No tasks yet. Click "Add Task" or "AI Tasks"!</div>';
+          return;
+        }
         tasks.forEach(task => {
-          const taskItem = document.createElement('div');
-          taskItem.className = `task-item ${task.completed ? 'completed' : ''} ${task.isAIGenerated ? 'ai-generated' : ''}`;
+          const item = document.createElement('div');
+          item.className = `task-item ${task.completed ? 'completed' : ''} ${task.is_ai_generated ? 'ai-generated' : ''}`;
 
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.className = 'task-checkbox';
-          checkbox.checked = task.completed;
-          checkbox.addEventListener('change', () => toggleTaskCompletion(task.id));
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.className = 'task-checkbox'; cb.checked = !!task.completed;
+          cb.addEventListener('change', async () => {
+            try {
+              await Tasks.toggle(task.id, cb.checked);
+              task.completed = cb.checked ? 1 : 0;
+              item.classList.toggle('completed', !!task.completed);
+              updateProgress();
+            } catch (err) { cb.checked = !cb.checked; }
+          });
 
           const content = document.createElement('div');
           content.className = 'task-content';
           content.textContent = task.text;
-
-          if (task.isAIGenerated) {
-            const aiBadge = document.createElement('span');
-            aiBadge.className = 'task-ai-badge';
-            aiBadge.innerHTML = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3">
-                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
-              </svg>
-              AI
-            `;
-            content.appendChild(aiBadge);
+          if (task.is_ai_generated) {
+            const badge = document.createElement('span');
+            badge.className = 'task-ai-badge'; badge.textContent = ' ✨ AI';
+            content.appendChild(badge);
           }
 
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'task-delete';
-          deleteBtn.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-              <path d="M3 6h18"></path>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-            </svg>
-          `;
-          deleteBtn.addEventListener('click', () => removeTask(task.id));
-
-          taskItem.appendChild(checkbox);
-          taskItem.appendChild(content);
-          taskItem.appendChild(deleteBtn);
-
-          taskList.appendChild(taskItem);
-        });
-      }
-
-      function addTask(text, subject, isAIGenerated = false) {
-        const newTask = {
-          id: Date.now(),
-          text,
-          completed: false,
-          subject,
-          isAIGenerated
-        };
-
-        tasks.push(newTask);
-        saveTasks();
-        renderTasks();
-        updateProgress();
-      }
-
-      function removeTask(id) {
-        tasks = tasks.filter(task => task.id !== id);
-        saveTasks();
-        renderTasks();
-        updateProgress();
-      }
-
-      function toggleTaskCompletion(id) {
-        tasks = tasks.map(task => {
-          if (task.id === id) {
-            return { ...task, completed: !task.completed };
-          }
-          return task;
-        });
-
-        saveTasks();
-        renderTasks();
-        updateProgress();
-      }
-
-      function updateProgress() {
-        // Overall progress
-        const totalTasks = tasks.length;
-        const completedTasks = tasks.filter(task => task.completed).length;
-        const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-        // Update progress circle
-        const circumference = 2 * Math.PI * 40;
-        progressCircleValue.style.strokeDasharray = circumference;
-        progressCircleValue.style.strokeDashoffset = circumference * (1 - progress / 100);
-        progressPercentage.textContent = `${progress}%`;
-
-        // Subject progress
-        const subjects = {
-          reading: { total: 0, completed: 0 },
-          math: { total: 0, completed: 0 },
-          science: { total: 0, completed: 0 }
-        };
-
-        tasks.forEach(task => {
-          if (subjects[task.subject]) {
-            subjects[task.subject].total++;
-            if (task.completed) {
-              subjects[task.subject].completed++;
-            }
-          }
-        });
-
-        // Update subject progress bars
-        for (const [subject, data] of Object.entries(subjects)) {
-          const percentage = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
-
-          if (subject === 'reading') {
-            readingProgress.style.width = `${percentage}%`;
-            readingPercentage.textContent = `${percentage}%`;
-          } else if (subject === 'math') {
-            mathProgress.style.width = `${percentage}%`;
-            mathPercentage.textContent = `${percentage}%`;
-          } else if (subject === 'science') {
-            scienceProgress.style.width = `${percentage}%`;
-            sciencePercentage.textContent = `${percentage}%`;
-          }
-        }
-      }
-
-      function renderCalendar() {
-        const today = new Date();
-        const currentMonth = today.toLocaleString('default', { month: 'long' });
-        const currentYear = today.getFullYear();
-
-        calendarMonth.textContent = `${currentMonth} ${currentYear}`;
-
-        // Clear calendar grid
-        calendarGrid.innerHTML = '';
-
-        // Generate calendar days
-        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-
-        for (let i = 1; i <= daysInMonth; i++) {
-          const date = new Date(today.getFullYear(), today.getMonth(), i);
-          const dateString = date.toISOString().split('T')[0];
-          const isToday = i === today.getDate();
-          const isCompleted = completedDates.includes(dateString);
-
-          const dayElement = document.createElement('div');
-          dayElement.className = `calendar-day ${isToday ? 'today' : ''} ${isCompleted ? 'completed' : ''}`;
-          dayElement.textContent = i;
-
-          if (isToday) {
-            dayElement.textContent += ' 🎯';
-          }
-
-          dayElement.addEventListener('click', () => toggleDateCompletion(dateString));
-
-          calendarGrid.appendChild(dayElement);
-        }
-      }
-
-      function toggleDateCompletion(dateString) {
-        if (completedDates.includes(dateString)) {
-          completedDates = completedDates.filter(date => date !== dateString);
-        } else {
-          completedDates.push(dateString);
-        }
-
-        saveCompletedDates();
-        renderCalendar();
-        updateStreak();
-      }
-
-      function updateStreak() {
-        // Sort dates
-        const sortedDates = [...completedDates].sort();
-
-        // Calculate streak
-        let currentStreak = 0;
-        const today = new Date().toISOString().split('T')[0];
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-        // Check if today or yesterday is completed to maintain streak
-        const hasRecentActivity = completedDates.includes(today) || completedDates.includes(yesterday);
-
-        if (!hasRecentActivity) {
-          streakCount.textContent = '0';
-          return;
-        }
-
-        // Count consecutive days
-        let checkDate = new Date();
-
-        while (true) {
-          const dateString = checkDate.toISOString().split('T')[0];
-
-          if (completedDates.includes(dateString)) {
-            currentStreak++;
-            checkDate.setDate(checkDate.getDate() - 1);
-          } else {
-            break;
-          }
-        }
-
-        streakCount.textContent = currentStreak.toString();
-      }
-
-      async function generateAITasks() {
-        // Validate inputs
-        const useCustomSubject = document.getElementById('custom').checked;
-        const subjectValue = useCustomSubject ? customSubjectInput.value.trim() : subject.value;
-        const difficultyValue = difficulty.value;
-        const countValue = parseInt(count.value);
-
-        if (useCustomSubject && !subjectValue) {
-          aiTasksAlert.textContent = 'Please enter a custom subject';
-          aiTasksAlert.classList.remove('hidden');
-          return;
-        }
-
-        // Show loading state
-        isGeneratingTasks = true;
-        generateTasksBtn.disabled = true;
-        generateTasksBtn.innerHTML = `
-          <div class="loading">
-            <div class="loading-dot"></div>
-            <div class="loading-dot"></div>
-            <div class="loading-dot"></div>
-          </div>
-          Generating...
-        `;
-
-        aiTasksAlert.classList.add('hidden');
-
-        try {
-          // Simulate API call with a delay
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          // Generate AI tasks based on inputs
-          const aiTasks = generateSimulatedAITasks(subjectValue, difficultyValue, countValue);
-
-          // Add tasks to the list
-          aiTasks.forEach(taskText => {
-            addTask(taskText, mapSubjectToCategory(subjectValue), true);
+          const del = document.createElement('button');
+          del.className = 'task-delete';
+          del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+          del.addEventListener('click', async () => {
+            try {
+              await Tasks.remove(task.id);
+              tasks = tasks.filter(t => t.id !== task.id);
+              renderTasks(); updateProgress();
+            } catch (err) { alert(err.message); }
           });
 
-          // Close modal
-          aiTasksModal.classList.remove('active');
+          item.appendChild(cb); item.appendChild(content); item.appendChild(del);
+          taskListEl.appendChild(item);
+        });
+      }
 
-          // Show success message
-          const successAlert = document.createElement('div');
-          successAlert.className = 'alert alert-success';
-          successAlert.textContent = `Successfully generated ${countValue} tasks!`;
-          document.querySelector('.dashboard-container').prepend(successAlert);
+      // ── Progress ──────────────────────────────────────────────────────────
+      function updateProgress() {
+        const total = tasks.length;
+        const done = tasks.filter(t => t.completed).length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        const circ = 2 * Math.PI * 40;
+        progressCircle.style.strokeDasharray = circ;
+        progressCircle.style.strokeDashoffset = circ * (1 - pct / 100);
+        progressPct.textContent = `${pct}%`;
 
-          // Remove success message after 3 seconds
-          setTimeout(() => {
-            successAlert.remove();
-          }, 3000);
-        } catch (error) {
-          aiTasksAlert.textContent = error.message || 'Failed to generate tasks';
-          aiTasksAlert.classList.remove('hidden');
-        } finally {
-          // Reset loading state
-          isGeneratingTasks = false;
-          generateTasksBtn.disabled = false;
-          generateTasksBtn.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
-              <path d="M5 3v4"></path>
-              <path d="M19 17v4"></path>
-              <path d="M3 5h4"></path>
-              <path d="M17 19h4"></path>
-            </svg>
-            Generate Tasks
-          `;
+        ['reading', 'math', 'science'].forEach(subj => {
+          const sub = tasks.filter(t => t.subject === subj);
+          const subPct = sub.length ? Math.round(sub.filter(t => t.completed).length / sub.length * 100) : 0;
+          document.getElementById(`${subj}-progress`).style.width = `${subPct}%`;
+          document.getElementById(`${subj}-percentage`).textContent = `${subPct}%`;
+        });
+      }
+
+      // ── Calendar ──────────────────────────────────────────────────────────
+      function renderCalendar() {
+        const today = new Date();
+        calendarMonth.textContent = today.toLocaleString('default', { month: 'long', year: 'numeric' });
+        calendarGrid.innerHTML = '';
+        const days = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        for (let i = 1; i <= days; i++) {
+          const date = new Date(today.getFullYear(), today.getMonth(), i).toISOString().split('T')[0];
+          const isToday = i === today.getDate();
+          const isDone = completedDates.includes(date);
+          const el = document.createElement('div');
+          el.className = `calendar-day ${isToday ? 'today' : ''} ${isDone ? 'completed' : ''}`;
+          el.textContent = i + (isToday ? ' 🎯' : '');
+          el.addEventListener('click', async () => {
+            try {
+              const res = await Tasks.toggleDate(date);
+              if (res.completed) completedDates.push(date);
+              else completedDates = completedDates.filter(d => d !== date);
+              renderCalendar(); updateStreak();
+            } catch {}
+          });
+          calendarGrid.appendChild(el);
         }
       }
 
+      // ── Streak ────────────────────────────────────────────────────────────
+      function updateStreak() {
+        const today = new Date().toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        if (!completedDates.includes(today) && !completedDates.includes(yesterday)) {
+          streakCountEl.textContent = '0'; return;
+        }
+        let streak = 0, check = new Date();
+        while (completedDates.includes(check.toISOString().split('T')[0])) {
+          streak++; check.setDate(check.getDate() - 1);
+        }
+        streakCountEl.textContent = streak;
+      }
+
+      // ── AI task generation (local simulation) ─────────────────────────────
       function generateSimulatedAITasks(subject, difficulty, count) {
-        // Predefined tasks by subject and difficulty
-        const taskTemplates = {
-          math: {
-            beginner: [
-              "Count from 1 to 20 and write the numbers down",
-              "Practice addition with numbers 1-10",
-              "Draw shapes and identify them: circle, square, triangle",
-              "Count objects in your room and record the total",
-              "Sort objects by size from smallest to largest"
-            ],
-            easy: [
-              "Solve 5 addition problems with numbers up to 20",
-              "Practice subtraction with numbers 1-20",
-              "Identify and draw 2D shapes: rectangle, oval, hexagon",
-              "Count by 2s up to 50",
-              "Solve simple word problems involving addition"
-            ],
-            medium: [
-              "Practice multiplication tables 1-5",
-              "Solve 10 division problems with numbers up to 50",
-              "Calculate the perimeter of different rectangles",
-              "Convert fractions to decimals (simple examples)",
-              "Solve word problems involving money"
-            ],
-            challenging: [
-              "Practice long division with remainders",
-              "Solve equations with variables on both sides",
-              "Calculate the area and perimeter of composite shapes",
-              "Work with fractions: addition and subtraction with different denominators",
-              "Solve multi-step word problems involving percentages"
-            ],
-            advanced: [
-              "Solve quadratic equations using the quadratic formula",
-              "Work with trigonometric functions: sine, cosine, tangent",
-              "Calculate the volume and surface area of 3D shapes",
-              "Solve systems of linear equations",
-              "Work with logarithmic and exponential functions"
-            ]
-          },
-          science: {
-            beginner: [
-              "Observe and draw the weather for 5 days",
-              "Identify 5 different plants in your neighborhood",
-              "Sort objects by whether they sink or float in water",
-              "Observe and record the daily movement of the sun",
-              "Identify the basic parts of a plant"
-            ],
-            easy: [
-              "Create a simple food chain with 4 organisms",
-              "Observe and record the phases of the moon for a week",
-              "Classify animals into groups: mammals, birds, reptiles, etc.",
-              "Conduct a simple experiment about plant growth",
-              "Learn about the water cycle and create a diagram"
-            ],
-            medium: [
-              "Build a simple electric circuit",
-              "Research and create a model of the solar system",
-              "Conduct an experiment about forces and motion",
-              "Learn about the human digestive system and create a diagram",
-              "Investigate the properties of different materials"
-            ],
-            challenging: [
-              "Design and conduct an experiment about photosynthesis",
-              "Research and explain Newton's laws of motion with examples",
-              "Create a detailed model of a cell and label its parts",
-              "Investigate chemical reactions and write balanced equations",
-              "Research and explain the greenhouse effect and climate change"
-            ],
-            advanced: [
-              "Design and conduct an experiment about enzyme activity",
-              "Research and explain quantum mechanics concepts",
-              "Analyze genetic inheritance patterns using Punnett squares",
-              "Investigate electrochemistry and build a simple battery",
-              "Research and explain the theory of relativity"
-            ]
-          },
-          english: {
-            beginner: [
-              "Practice writing the alphabet in uppercase and lowercase",
-              "Read a short story and draw a picture about it",
-              "Practice spelling 5 simple three-letter words",
-              "Identify rhyming words in a nursery rhyme",
-              "Practice writing your name and address"
-            ],
-            easy: [
-              "Read a short book and identify the main character",
-              "Write 3 sentences about your favorite animal",
-              "Practice spelling 10 common words",
-              "Identify nouns and verbs in simple sentences",
-              "Write a thank-you note to someone"
-            ],
-            medium: [
-              "Read a chapter book and write a short summary",
-              "Write a paragraph describing your favorite place",
-              "Identify and use adjectives and adverbs in sentences",
-              "Practice using punctuation correctly in writing",
-              "Write a simple poem using rhyming words"
-            ],
-            challenging: [
-              "Read a novel and analyze the main character's development",
-              "Write a five-paragraph essay on a topic of your choice",
-              "Identify and use figurative language in writing",
-              "Analyze the theme of a story or poem",
-              "Research and write a report on a historical figure"
-            ],
-            advanced: [
-              "Analyze complex literary works and write a critical essay",
-              "Research and write a persuasive essay with proper citations",
-              "Create an original short story with well-developed characters and plot",
-              "Compare and contrast different literary movements or authors",
-              "Analyze rhetorical strategies in speeches or articles"
-            ]
-          },
-          history: {
-            beginner: [
-              "Draw a timeline of your day with 5 events",
-              "Learn about a historical figure and draw their portrait",
-              "Identify and learn about 3 important holidays",
-              "Create a family tree with your immediate family",
-              "Learn about your community's history"
-            ],
-            easy: [
-              "Create a timeline of your life with 10 important events",
-              "Research and write 5 facts about an ancient civilization",
-              "Learn about a historical event and draw a picture about it",
-              "Interview an older family member about their childhood",
-              "Learn about the history of your state or region"
-            ],
-            medium: [
-              "Create a timeline of major events in your country's history",
-              "Research and write a one-page report on an ancient civilization",
-              "Compare life today with life 100 years ago",
-              "Learn about a significant historical event and its impact",
-              "Research the history of an invention and how it changed society"
-            ],
-            challenging: [
-              "Research and analyze a major historical event and its causes",
-              "Compare and contrast two different historical periods",
-              "Analyze primary source documents from a historical period",
-              "Research and explain how geography influenced a civilization",
-              "Create a detailed timeline of a historical period with analysis"
-            ],
-            advanced: [
-              "Analyze the causes and effects of a major historical conflict",
-              "Research and write a paper on historiography of a specific event",
-              "Compare different historical interpretations of the same event",
-              "Analyze the influence of economic factors on historical developments",
-              "Research and explain the development of political systems through history"
-            ]
-          },
-          programming: {
-            beginner: [
-              "Learn about what a computer program is",
-              "Create a simple flowchart for an everyday task",
-              "Learn basic computer terminology",
-              "Practice typing skills for 15 minutes",
-              "Learn what algorithms are with simple examples"
-            ],
-            easy: [
-              "Write pseudocode for a simple calculator",
-              "Learn about variables and data types",
-              "Create a simple program that prints 'Hello, World!'",
-              "Learn about conditional statements (if/else)",
-              "Create a program that asks for user input and responds"
-            ],
-            medium: [
-              "Create a program that uses loops to solve a problem",
-              "Build a simple calculator program",
-              "Learn about arrays and create a program using them",
-              "Create a program that reads and writes to a file",
-              "Build a simple game like rock-paper-scissors"
-            ],
-            challenging: [
-              "Create a program that uses functions/methods effectively",
-              "Build a program that uses object-oriented programming concepts",
-              "Create a simple web page with HTML, CSS, and JavaScript",
-              "Build a program that uses APIs to fetch data",
-              "Create a database and connect it to a program"
-            ],
-            advanced: [
-              "Build a full-stack web application with user authentication",
-              "Create a mobile app with multiple screens and features",
-              "Implement advanced algorithms like sorting or pathfinding",
-              "Build a program that uses machine learning concepts",
-              "Create a program that uses parallel processing or multithreading"
-            ]
-          }
+        const templates = {
+          math: { medium: ['Practice multiplication tables 1-5','Solve 10 division problems','Calculate perimeter of rectangles','Convert fractions to decimals','Solve word problems involving money'] },
+          science: { medium: ['Build a simple electric circuit','Research the solar system','Conduct a forces experiment','Learn about the digestive system','Investigate material properties'] },
+          english: { medium: ['Read a chapter and summarize it','Write a descriptive paragraph','Identify adjectives and adverbs','Practice punctuation in writing','Write a simple poem'] },
+          history: { medium: ['Create a country history timeline','Write a report on an ancient civilization','Compare life today vs 100 years ago','Research a significant historical event','Research an invention\'s history'] },
+          programming: { medium: ['Create a program using loops','Build a simple calculator','Learn about arrays','Create a file read/write program','Build rock-paper-scissors game'] }
         };
-
-        // For custom subjects, generate generic tasks
-        if (!taskTemplates[subject]) {
-          return generateGenericTasks(subject, difficulty, count);
-        }
-
-        // Get tasks for the specified subject and difficulty
-        const availableTasks = taskTemplates[subject][difficulty] || taskTemplates[subject].medium;
-
-        // Randomly select the requested number of tasks
-        const selectedTasks = [];
-        const tasksCopy = [...availableTasks];
-
-        for (let i = 0; i < count && tasksCopy.length > 0; i++) {
-          const randomIndex = Math.floor(Math.random() * tasksCopy.length);
-          selectedTasks.push(tasksCopy[randomIndex]);
-          tasksCopy.splice(randomIndex, 1);
-        }
-
-        return selectedTasks;
+        const pool = templates[subject]?.[difficulty] || templates[subject]?.medium || [
+          `Research a key concept in ${subject}`, `Practice ${subject} for 30 minutes`,
+          `Create a mind map for ${subject}`, `Solve 5 ${subject} problems`, `Teach someone a ${subject} concept`
+        ];
+        return pool.sort(() => Math.random() - 0.5).slice(0, count);
       }
 
-      function generateGenericTasks(subject, difficulty, count) {
-        // Generic task templates that can be adapted to any subject
-        const genericTemplates = {
-          beginner: [
-            `Learn 5 basic facts about ${subject}`,
-            `Draw a picture related to ${subject}`,
-            `Find and write down 3 interesting things about ${subject}`,
-            `Watch a beginner video about ${subject}`,
-            `Create a simple vocabulary list for ${subject}`
-          ],
-          easy: [
-            `Read a short article about ${subject} and summarize it`,
-            `Create a mind map of basic ${subject} concepts`,
-            `Practice ${subject} skills for 15 minutes`,
-            `Find and solve 3 simple ${subject} problems`,
-            `Create flashcards for ${subject} terminology`
-          ],
-          medium: [
-            `Research and write a one-page report on an aspect of ${subject}`,
-            `Create a presentation about an interesting ${subject} topic`,
-            `Practice intermediate ${subject} skills for 30 minutes`,
-            `Find and solve 5 medium-difficulty ${subject} problems`,
-            `Teach someone else a concept from ${subject}`
-          ],
-          challenging: [
-            `Research and analyze a complex topic in ${subject}`,
-            `Create a detailed project related to ${subject}`,
-            `Practice advanced ${subject} skills for 45 minutes`,
-            `Find and solve challenging ${subject} problems`,
-            `Compare different approaches or theories in ${subject}`
-          ],
-          advanced: [
-            `Conduct in-depth research on a specialized area of ${subject}`,
-            `Create an original contribution to ${subject}`,
-            `Practice expert-level ${subject} skills for 1 hour`,
-            `Analyze and critique advanced concepts in ${subject}`,
-            `Integrate ${subject} with another field in a meaningful way`
-          ]
-        };
-
-        // Get tasks for the specified difficulty
-        const availableTasks = genericTemplates[difficulty] || genericTemplates.medium;
-
-        // Randomly select the requested number of tasks
-        const selectedTasks = [];
-        const tasksCopy = [...availableTasks];
-
-        for (let i = 0; i < count && tasksCopy.length > 0; i++) {
-          const randomIndex = Math.floor(Math.random() * tasksCopy.length);
-          selectedTasks.push(tasksCopy[randomIndex]);
-          tasksCopy.splice(randomIndex, 1);
-        }
-
-        return selectedTasks;
+      function mapSubjectToCategory(s) {
+        s = s.toLowerCase();
+        if (['math','algebra','calculus','geometry','programming','coding'].some(k => s.includes(k))) return 'math';
+        if (['science','physics','chemistry','biology'].some(k => s.includes(k))) return 'science';
+        return 'reading';
       }
-
-      function mapSubjectToCategory(subject) {
-        // Map subject to one of our progress categories
-        const subjectMap = {
-          math: 'math',
-          mathematics: 'math',
-          algebra: 'math',
-          geometry: 'math',
-          calculus: 'math',
-
-          science: 'science',
-          physics: 'science',
-          chemistry: 'science',
-          biology: 'science',
-
-          english: 'reading',
-          reading: 'reading',
-          literature: 'reading',
-          writing: 'reading',
-
-          history: 'reading',
-          geography: 'reading',
-
-          programming: 'math',
-          coding: 'math',
-          computer: 'math'
-        };
-
-        // Convert to lowercase for case-insensitive matching
-        const lowerSubject = subject.toLowerCase();
-
-        // Return mapped category or default to 'general'
-        for (const [key, value] of Object.entries(subjectMap)) {
-          if (lowerSubject.includes(key)) {
-            return value;
-          }
-        }
-
-        return 'general';
-      }
-
-      // Close modals when clicking outside
-      window.addEventListener('click', (e) => {
-        if (e.target === addTaskModal) {
-          addTaskModal.classList.remove('active');
-        }
-        if (e.target === aiTasksModal) {
-          aiTasksModal.classList.remove('active');
-        }
-      });
     });
   </script>
 </body>

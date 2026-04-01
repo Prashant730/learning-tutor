@@ -1,0 +1,59 @@
+{
+  "users": [
+    {
+      "id": "969e6a213aa732da",
+      "name": "Test User",
+      "email": "test@test.com",
+      "password": "$2a$12$fWz2C3HI7dhdCAjqWTk.4O38WTlb1QqyeTf9ojWXyQqtwS9LRgec.",
+      "role": "student",
+      "created_at": "2026-04-01T20:30:06.854Z"
+    },
+    {
+      "id": "ba5d6949e6a3d926",
+      "name": "Prashant Kumar",
+      "email": "1306pkumar@gmail.com",
+      "password": "$2a$12$jilOqYhPLFNnSzqI2VKweuMVNsZEFxxk0xYwkAoSSL1K3hIxNl.w.",
+      "role": "student",
+      "created_at": "2026-04-01T20:54:49.113Z"
+    }
+  ],
+  "tasks": [],
+  "completed_dates": [],
+  "chat_messages": [
+    {
+      "id": "305078571ecb39bf",
+      "user_id": "969e6a213aa732da",
+      "role": "user",
+      "content": "What is the Pythagorean theorem?",
+      "created_at": "2026-04-01T20:50:56.611Z"
+    },
+    {
+      "id": "d5ccfc60ce64f414",
+      "user_id": "969e6a213aa732da",
+      "role": "user",
+      "content": "What is the Pythagorean theorem?",
+      "created_at": "2026-04-01T20:51:14.420Z"
+    },
+    {
+      "id": "84f5801fc0e95bb8",
+      "user_id": "969e6a213aa732da",
+      "role": "user",
+      "content": "What is the Pythagorean theorem?",
+      "created_at": "2026-04-01T20:51:35.536Z"
+    },
+    {
+      "id": "c229fd86339191b6",
+      "user_id": "969e6a213aa732da",
+      "role": "user",
+      "content": "What is the Pythagorean theorem? Explain briefly.",
+      "created_at": "2026-04-01T20:53:01.152Z"
+    },
+    {
+      "id": "1157f81386116805",
+      "user_id": "969e6a213aa732da",
+      "role": "user",
+      "content": "What is 2+2?",
+      "created_at": "2026-04-01T20:53:18.739Z"
+    }
+  ]
+}

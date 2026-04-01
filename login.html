@@ -389,7 +389,8 @@
 
           <!-- Login Form -->
           <div class="tab-content active" id="login-tab">
-            <form id="login-form" onsubmit="simulateLogin(event)">
+            <div id="login-error" style="display:none;color:#dc2626;background:#fee2e2;border:1px solid #fca5a5;padding:0.75rem;border-radius:0.5rem;margin-bottom:1rem;font-size:0.9rem;"></div>
+            <form id="login-form" onsubmit="handleLogin(event)">
               <div class="form-group">
                 <label for="email" class="form-label">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.25rem;">
@@ -432,7 +433,8 @@
 
           <!-- Register Form -->
           <div class="tab-content" id="register-tab">
-            <form id="register-form" onsubmit="simulateRegister(event)">
+            <div id="register-error" style="display:none;color:#dc2626;background:#fee2e2;border:1px solid #fca5a5;padding:0.75rem;border-radius:0.5rem;margin-bottom:1rem;font-size:0.9rem;"></div>
+            <form id="register-form" onsubmit="handleRegister(event)">
               <div class="form-group">
                 <label for="name" class="form-label">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.25rem;">
@@ -525,38 +527,91 @@
     </footer>
   </div>
 
+  <script src="api.js"></script>
   <script>
+    // Redirect if already logged in
+    if (isLoggedIn()) window.location.href = 'dashboard.html';
+
+    let selectedRole = 'student';
+
     // Tab switching
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
-
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const tabId = tab.getAttribute('data-tab');
-
-        // Update active tab
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-
-        // Show corresponding content
-        tabContents.forEach(content => {
-          content.classList.remove('active');
-          if (content.id === `${tabId}-tab`) {
-            content.classList.add('active');
-          }
+        tabContents.forEach(c => {
+          c.classList.remove('active');
+          if (c.id === `${tabId}-tab`) c.classList.add('active');
         });
       });
     });
 
     // Account type switching
-    const accountTypes = document.querySelectorAll('.account-type-option');
-
-    accountTypes.forEach(type => {
-      type.addEventListener('click', () => {
-        accountTypes.forEach(t => t.classList.remove('active'));
-        type.classList.add('active');
+    document.querySelectorAll('.account-type-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.account-type-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        selectedRole = opt.dataset.type;
       });
     });
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function setLoading(btn, loading) {
+      btn.disabled = loading;
+      btn.querySelector('span').textContent = loading ? 'Please wait...' : btn.dataset.label;
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      document.getElementById('login-error').style.display = 'none';
+      const btn = e.target.querySelector('button[type="submit"]');
+      if (!btn.dataset.label) btn.dataset.label = btn.querySelector('span').textContent;
+      setLoading(btn, true);
+      try {
+        await Auth.login(
+          document.getElementById('email').value.trim(),
+          document.getElementById('password').value
+        );
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError('login-error', err.message);
+        setLoading(btn, false);
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      document.getElementById('register-error').style.display = 'none';
+      const password = document.getElementById('reg-password').value;
+      const confirm = document.getElementById('confirm-password').value;
+      if (password !== confirm) {
+        showError('register-error', 'Passwords do not match');
+        return;
+      }
+      const btn = e.target.querySelector('button[type="submit"]');
+      if (!btn.dataset.label) btn.dataset.label = btn.querySelector('span').textContent;
+      setLoading(btn, true);
+      try {
+        await Auth.register(
+          document.getElementById('name').value.trim(),
+          document.getElementById('reg-email').value.trim(),
+          password,
+          selectedRole
+        );
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showError('register-error', err.message);
+        setLoading(btn, false);
+      }
+    }
   </script>
 </body>
 </html>

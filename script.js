@@ -180,11 +180,6 @@ function initChat() {
   // Simple response generation (in a real app, this would call an API)
   function generateResponse(message) {
     const lowerMessage = message.toLowerCase()
-
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      return 'Hello! How can I help with your learning today?'
-    }
-
     if (
       lowerMessage.includes('math') ||
       lowerMessage.includes('algebra') ||
@@ -278,8 +273,8 @@ function initDashboard() {
       taskItem.className = `task-item ${task.completed ? 'completed' : ''}`
       taskItem.innerHTML = `
         <input type="checkbox" id="task-${task.id}" ${
-        task.completed ? 'checked' : ''
-      }>
+          task.completed ? 'checked' : ''
+        }>
         <label for="task-${task.id}">${task.text}</label>
         <button class="delete-task" data-id="${task.id}">×</button>
       `
@@ -322,67 +317,586 @@ document.addEventListener('DOMContentLoaded', initDashboard)
 function initVideoCall() {
   const joinBtn = document.getElementById('join-call-btn')
   const createBtn = document.getElementById('create-call-btn')
+  const copyRoomBtn = document.getElementById('copy-room-btn')
   const setupScreen = document.getElementById('setup-screen')
   const callScreen = document.getElementById('call-screen')
   const endCallBtn = document.getElementById('end-call-btn')
   const micBtn = document.getElementById('mic-btn')
   const cameraBtn = document.getElementById('camera-btn')
+  const roomCodeInput = document.getElementById('room-code-input')
+  const displayNameInput = document.getElementById('display-name-input')
+  const activeRoomCode = document.getElementById('active-room-code')
+  const localVideo = document.getElementById('local-video')
+  const remoteVideo = document.getElementById('remote-video')
+  const localPlaceholder = document.getElementById('local-placeholder')
+  const remotePlaceholder = document.getElementById('remote-placeholder')
+  const connectionStatus = document.getElementById('connection-status')
+  const statusDot = document.getElementById('status-dot')
+  const statusText = document.getElementById('status-text')
+  const participantsList = document.getElementById('participants-list')
+  const sessionSummary = document.getElementById('session-summary')
+  const shareRoomCode = document.getElementById('share-room-code')
 
   if (!joinBtn || !createBtn || !setupScreen || !callScreen) return
 
-  // Join call button
+  const socketFactory = window.io
+  let socket = null
+  let localStream = null
+  let peerConnection = null
+  let currentRoomCode = ''
+  let currentPeerId = null
+  let isEndingCall = false
+  let rtcConfig = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+    ],
+  }
+  const participants = new Map()
+
+  function getDisplayName() {
+    const value = displayNameInput?.value?.trim()
+    return value || 'Student'
+  }
+
+  function getRoomCode() {
+    const value = roomCodeInput?.value?.trim()
+    return (
+      value || `ROOM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+    )
+  }
+
+  function setStatus(text, type = 'pending') {
+    if (statusText) statusText.textContent = text
+    if (statusDot) {
+      statusDot.classList.remove('connected', 'error')
+      if (type === 'connected') statusDot.classList.add('connected')
+      if (type === 'error') statusDot.classList.add('error')
+    }
+  }
+
+  function syncShareCode(code) {
+    if (shareRoomCode) shareRoomCode.textContent = code || 'Not created yet'
+    if (activeRoomCode) activeRoomCode.textContent = code || 'TUTOR-204'
+  }
+
+  async function loadWebRtcConfig() {
+    try {
+      const response = await fetch('/api/webrtc-config')
+      if (!response.ok) return
+
+      const data = await response.json()
+      if (Array.isArray(data?.iceServers) && data.iceServers.length > 0) {
+        rtcConfig = { iceServers: data.iceServers }
+      }
+    } catch (error) {
+      console.warn('Using default WebRTC config:', error)
+    }
+  }
+
+  function getTrackState() {
+    const [audioTrack] = localStream?.getAudioTracks?.() || []
+    const [videoTrack] = localStream?.getVideoTracks?.() || []
+    return {
+      micOn: audioTrack ? audioTrack.enabled : true,
+      cameraOn: videoTrack ? videoTrack.enabled : true,
+    }
+  }
+
+  function ensureMediaVisible() {
+    if (localVideo && localVideo.srcObject)
+      localPlaceholder?.classList.add('hidden')
+    if (remoteVideo && remoteVideo.srcObject)
+      remotePlaceholder?.classList.add('hidden')
+  }
+
+  function renderParticipants() {
+    if (!participantsList) return
+
+    const ordered = [...participants.values()].sort(
+      (left, right) => (left.order || 99) - (right.order || 99),
+    )
+
+    participantsList.innerHTML = ordered
+      .map((participant) => {
+        const statusClass = participant.online
+          ? participant.connected
+            ? 'live'
+            : ''
+          : 'offline'
+        const statusLabel = participant.online
+          ? participant.connected
+            ? 'Connected'
+            : 'In room'
+          : 'Left'
+
+        return `
+          <div class="participant-row">
+            <div class="participant-row-header">
+              <div class="participant-name">${participant.name}${participant.isLocal ? ' (You)' : ''}</div>
+              <span class="participant-status ${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="participant-metadata">
+              <span class="meta-pill">Joined #${participant.order || '?'}</span>
+              <span class="meta-pill">Mic ${participant.micOn ? 'On' : 'Muted'}</span>
+              <span class="meta-pill">Camera ${participant.cameraOn ? 'On' : 'Off'}</span>
+            </div>
+          </div>
+        `
+      })
+      .join('')
+
+    renderSessionSummary()
+  }
+
+  function renderSessionSummary() {
+    if (!sessionSummary) return
+
+    const ordered = [...participants.values()].sort(
+      (left, right) => (left.order || 99) - (right.order || 99),
+    )
+
+    if (ordered.length === 0) {
+      sessionSummary.textContent =
+        'No session started yet. Create or join a room to see who joined first and who is muted.'
+      return
+    }
+
+    const first = ordered[0]
+    const second = ordered[1]
+    const local = ordered.find((participant) => participant.isLocal)
+    const remote = ordered.find((participant) => !participant.isLocal)
+
+    const firstText = first.isLocal
+      ? 'You joined first.'
+      : `${first.name} joined first.`
+    const secondText = second
+      ? second.isLocal
+        ? 'You joined second.'
+        : `${second.name} joined second.`
+      : 'Waiting for a second participant.'
+
+    const localText = local
+      ? `You are ${local.micOn ? 'unmuted' : 'muted'} and your camera is ${local.cameraOn ? 'on' : 'off'}.`
+      : ''
+    const remoteText = remote
+      ? `${remote.name} is ${remote.micOn ? 'unmuted' : 'muted'} and their camera is ${remote.cameraOn ? 'on' : 'off'}.`
+      : 'No peer is connected yet.'
+
+    sessionSummary.textContent =
+      `${firstText} ${secondText} ${localText} ${remoteText}`.trim()
+  }
+
+  function upsertParticipant(id, updates) {
+    const existing = participants.get(id) || {
+      id,
+      name: updates.name || 'Anonymous',
+      order: updates.order || participants.size + 1,
+      isLocal: !!updates.isLocal,
+      online: true,
+      connected: false,
+      micOn: true,
+      cameraOn: true,
+    }
+
+    Object.assign(existing, updates)
+    participants.set(id, existing)
+    renderParticipants()
+  }
+
+  function markParticipantOffline(id) {
+    const participant = participants.get(id)
+    if (!participant) return
+    participant.online = false
+    participant.connected = false
+    renderParticipants()
+  }
+
+  function syncLocalParticipant() {
+    const tracks = getTrackState()
+    upsertParticipant('local', {
+      name: getDisplayName(),
+      order: participants.get('local')?.order || 1,
+      isLocal: true,
+      online: true,
+      connected: true,
+      micOn: tracks.micOn,
+      cameraOn: tracks.cameraOn,
+    })
+  }
+
+  function publishMediaState() {
+    if (!socket || !currentRoomCode || !localStream) return
+    const tracks = getTrackState()
+
+    socket.emit('media-state', {
+      roomCode: currentRoomCode,
+      video: tracks.cameraOn,
+      audio: tracks.micOn,
+    })
+  }
+
+  async function ensureLocalStream() {
+    if (localStream) return localStream
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      })
+      if (localVideo) localVideo.srcObject = localStream
+      ensureMediaVisible()
+      syncLocalParticipant()
+      return localStream
+    } catch (error) {
+      console.error('Failed to access camera/microphone:', error)
+      setStatus('Camera or microphone permission blocked', 'error')
+      throw error
+    }
+  }
+
+  function createPeerConnection() {
+    if (peerConnection) return peerConnection
+
+    peerConnection = new RTCPeerConnection(rtcConfig)
+
+    if (localStream) {
+      localStream.getTracks().forEach((track) => {
+        peerConnection.addTrack(track, localStream)
+      })
+    }
+
+    peerConnection.ontrack = (event) => {
+      if (!remoteVideo) return
+      remoteVideo.srcObject = event.streams[0]
+      ensureMediaVisible()
+      setStatus('Connected', 'connected')
+    }
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate && socket && currentPeerId) {
+        socket.emit('ice-candidate', {
+          to: currentPeerId,
+          candidate: event.candidate,
+        })
+      }
+    }
+
+    peerConnection.onconnectionstatechange = () => {
+      if (!peerConnection) return
+      if (peerConnection.connectionState === 'connected')
+        setStatus('Connected', 'connected')
+      if (peerConnection.connectionState === 'disconnected')
+        setStatus('Peer disconnected', 'pending')
+      if (peerConnection.connectionState === 'failed')
+        setStatus('Connection failed', 'error')
+    }
+
+    return peerConnection
+  }
+
+  async function createOffer() {
+    if (!peerConnection || !currentPeerId) return
+
+    const offer = await peerConnection.createOffer()
+    await peerConnection.setLocalDescription(offer)
+
+    socket.emit('offer', {
+      to: currentPeerId,
+      offer,
+    })
+  }
+
+  async function handlePeerSignal(peerId, shouldInitiate = false) {
+    currentPeerId = peerId
+    createPeerConnection()
+
+    if (shouldInitiate) {
+      await createOffer()
+    }
+  }
+
+  async function launchCall(roomCodeOverride, mode = 'join') {
+    if (!socketFactory || typeof socketFactory !== 'function') {
+      setStatus('Socket client not available', 'error')
+      return
+    }
+
+    await loadWebRtcConfig()
+
+    currentRoomCode = roomCodeOverride || getRoomCode()
+    syncShareCode(currentRoomCode)
+
+    participants.clear()
+    upsertParticipant('local', {
+      name: getDisplayName(),
+      order: 1,
+      isLocal: true,
+      online: true,
+      connected: true,
+      micOn: true,
+      cameraOn: true,
+    })
+
+    setupScreen.classList.add('hidden')
+    callScreen.classList.remove('hidden')
+    setStatus('Requesting camera and microphone...', 'pending')
+
+    try {
+      await ensureLocalStream()
+    } catch {
+      participants.clear()
+      renderParticipants()
+      syncShareCode('Not created yet')
+      currentRoomCode = ''
+      callScreen.classList.add('hidden')
+      setupScreen.classList.remove('hidden')
+      return
+    }
+
+    socket = socketFactory()
+
+    socket.on('connect', () => {
+      socket.emit('join-room', {
+        roomCode: currentRoomCode,
+        userName: getDisplayName(),
+      })
+      setStatus('Connected to room', 'pending')
+    })
+
+    socket.on('room-peers', async (peers) => {
+      const peer = peers?.[0]
+      if (peer) {
+        upsertParticipant(peer.id, {
+          name: peer.name || 'Peer',
+          order: 1,
+          isLocal: false,
+          online: true,
+          connected: true,
+        })
+        upsertParticipant('local', {
+          name: getDisplayName(),
+          order: 2,
+          isLocal: true,
+          online: true,
+          connected: true,
+        })
+        await handlePeerSignal(peer.id, true)
+        setStatus(`Joining as ${getDisplayName()}`, 'pending')
+      } else {
+        upsertParticipant('local', {
+          name: getDisplayName(),
+          order: 1,
+          isLocal: true,
+          online: true,
+          connected: true,
+        })
+        if (mode === 'create')
+          setStatus('Waiting for another participant', 'pending')
+      }
+    })
+
+    socket.on('peer-joined', async ({ id, name }) => {
+      if (!currentPeerId) {
+        upsertParticipant(id, {
+          name: name || 'Peer',
+          order: 2,
+          isLocal: false,
+          online: true,
+          connected: true,
+        })
+        await handlePeerSignal(id, false)
+      }
+      setStatus('Peer joined the room', 'pending')
+    })
+
+    socket.on('offer', async ({ from, offer }) => {
+      currentPeerId = from
+      createPeerConnection()
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(offer),
+      )
+      const answer = await peerConnection.createAnswer()
+      await peerConnection.setLocalDescription(answer)
+      socket.emit('answer', {
+        to: from,
+        answer,
+      })
+    })
+
+    socket.on('answer', async ({ answer }) => {
+      if (!peerConnection) return
+      await peerConnection.setRemoteDescription(
+        new RTCSessionDescription(answer),
+      )
+      setStatus('Connected', 'connected')
+    })
+
+    socket.on('ice-candidate', async ({ candidate }) => {
+      if (peerConnection && candidate) {
+        try {
+          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+        } catch (error) {
+          console.error('Failed to add ICE candidate:', error)
+        }
+      }
+    })
+
+    socket.on('peer-media-state', ({ id, video, audio }) => {
+      const participant = participants.get(id)
+      if (!participant) return
+      upsertParticipant(id, {
+        micOn: !!audio,
+        cameraOn: !!video,
+        connected: true,
+        online: true,
+      })
+    })
+
+    socket.on('peer-left', ({ id }) => {
+      if (id === currentPeerId) {
+        currentPeerId = null
+        if (remoteVideo) remoteVideo.srcObject = null
+        remotePlaceholder?.classList.remove('hidden')
+        setStatus('Peer left the room', 'pending')
+      }
+      markParticipantOffline(id)
+    })
+
+    socket.on('disconnect', () => {
+      if (!isEndingCall)
+        setStatus('Disconnected from signaling server', 'error')
+    })
+  }
+
   if (joinBtn) {
     joinBtn.addEventListener('click', () => {
-      const roomCode = prompt('Enter room code:')
-      if (roomCode) {
-        startCall()
+      const roomCode = roomCodeInput?.value?.trim()
+      if (!roomCode) {
+        setStatus('Enter a room code first, then join.', 'error')
+        roomCodeInput?.focus()
+        return
+      }
+
+      launchCall(roomCode, 'join')
+    })
+  }
+
+  if (createBtn) {
+    createBtn.addEventListener('click', () => {
+      const roomCode = roomCodeInput?.value?.trim() || getRoomCode()
+      if (roomCodeInput) roomCodeInput.value = roomCode
+      syncShareCode(roomCode)
+      launchCall(roomCode, 'create')
+    })
+  }
+
+  if (copyRoomBtn) {
+    copyRoomBtn.addEventListener('click', async () => {
+      const code = currentRoomCode || roomCodeInput?.value?.trim()
+      if (!code) {
+        setStatus('Create or enter a room code before copying.', 'error')
+        return
+      }
+
+      try {
+        await navigator.clipboard.writeText(code)
+        setStatus(`Copied room code ${code}`, 'pending')
+      } catch {
+        setStatus('Could not copy the room code.', 'error')
       }
     })
   }
 
-  // Create call button
-  if (createBtn) {
-    createBtn.addEventListener('click', () => {
-      startCall()
-    })
-  }
-
-  // End call button
   if (endCallBtn) {
     endCallBtn.addEventListener('click', () => {
       endCall()
     })
   }
 
-  // Mic toggle
   if (micBtn) {
     micBtn.addEventListener('click', () => {
-      micBtn.classList.toggle('active')
+      const [audioTrack] = localStream?.getAudioTracks?.() || []
+      if (!audioTrack) return
+
+      audioTrack.enabled = !audioTrack.enabled
+      micBtn.classList.toggle('active', audioTrack.enabled)
+      upsertParticipant('local', {
+        name: getDisplayName(),
+        ...getTrackState(),
+        isLocal: true,
+        online: true,
+        connected: true,
+      })
+      setStatus(
+        audioTrack.enabled ? 'Microphone on' : 'Microphone muted',
+        'pending',
+      )
+      publishMediaState()
     })
   }
 
-  // Camera toggle
   if (cameraBtn) {
     cameraBtn.addEventListener('click', () => {
-      cameraBtn.classList.toggle('active')
+      const [videoTrack] = localStream?.getVideoTracks?.() || []
+      if (!videoTrack) return
+
+      videoTrack.enabled = !videoTrack.enabled
+      cameraBtn.classList.toggle('active', videoTrack.enabled)
+      upsertParticipant('local', {
+        name: getDisplayName(),
+        ...getTrackState(),
+        isLocal: true,
+        online: true,
+        connected: true,
+      })
+      setStatus(videoTrack.enabled ? 'Camera on' : 'Camera off', 'pending')
+      publishMediaState()
     })
-  }
-
-  function startCall() {
-    setupScreen.classList.add('hidden')
-    callScreen.classList.remove('hidden')
-
-    // In a real app, you would initialize WebRTC here
-    console.log('Starting call...')
   }
 
   function endCall() {
+    isEndingCall = true
+
+    if (socket) {
+      socket.emit('leave-room', { roomCode: currentRoomCode })
+      socket.removeAllListeners()
+      socket.disconnect()
+      socket = null
+    }
+
+    if (peerConnection) {
+      peerConnection.ontrack = null
+      peerConnection.onicecandidate = null
+      peerConnection.onconnectionstatechange = null
+      peerConnection.close()
+      peerConnection = null
+    }
+
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop())
+      localStream = null
+    }
+
+    if (localVideo) localVideo.srcObject = null
+    if (remoteVideo) remoteVideo.srcObject = null
+    localPlaceholder?.classList.remove('hidden')
+    remotePlaceholder?.classList.remove('hidden')
+
+    participants.clear()
+    renderParticipants()
+    syncShareCode('Not created yet')
+
     callScreen.classList.add('hidden')
     setupScreen.classList.remove('hidden')
+    setStatus('Waiting for connection', 'pending')
 
-    // In a real app, you would clean up WebRTC connections here
-    console.log('Ending call...')
+    currentPeerId = null
+    currentRoomCode = ''
+    isEndingCall = false
   }
+
+  renderParticipants()
 }
 
 // Initialize video call functionality on page load
