@@ -207,6 +207,15 @@ io.on('connection', (socket) => {
       .filter(([id]) => id !== socket.id)
       .map(([id, name]) => ({ id, name }))
 
+    // Confirm to the joining peer that they successfully joined
+    console.log(
+      `📤 Sending room-joined confirmation to ${socket.id} for room ${roomId}`,
+    )
+    socket.emit('room-joined', {
+      roomId: roomId,
+      name: socket.userName,
+    })
+
     // Tell the new peer about existing peers
     socket.emit('room-peers', { peers })
 
@@ -217,7 +226,7 @@ io.on('connection', (socket) => {
     })
 
     console.log(
-      `${socket.userName} joined room ${roomId} (${rooms.get(roomId).size} peers)`,
+      `✅ ${socket.userName} joined room ${roomId} (${rooms.get(roomId).size} peers)`,
     )
   })
 

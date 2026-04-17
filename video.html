@@ -1025,38 +1025,6 @@
 			return peerConnection;
 		}
 
-		function addParticipant(peerId, name, stream) {
-			console.log(`Adding participant: ${peerId} (${name})`);
-			const participantsList = document.getElementById('participants-list');
-			if (!participantsList) return;
-
-			const existingParticipant = document.getElementById(`participant-${peerId}`);
-			if (existingParticipant) {
-				console.log(`Participant ${peerId} already in list`);
-				return;
-			}
-
-			const participantDiv = document.createElement('div');
-			participantDiv.className = 'participant-row';
-			participantDiv.id = `participant-${peerId}`;
-			participantDiv.innerHTML = `
-				<div class="participant-row-header">
-					<div class="participant-name">${name || 'Unknown'}</div>
-					<div class="participant-status">Connected</div>
-				</div>
-				<div class="participant-metadata">
-					<span class="meta-pill">Video</span>
-					<span class="meta-pill">Audio</span>
-				</div>
-			`;
-			participantsList.appendChild(participantDiv);
-
-			if (stream && document.getElementById('remote-video')) {
-				document.getElementById('remote-video').srcObject = stream;
-				document.getElementById('remote-placeholder').style.display = 'none';
-			}
-		}
-
 		async function connectToServer(roomId, name, isInitialConnection = false) {
 			const backendUrl = await resolveBackendUrl();
 			console.log(`Attempting to connect to server at ${backendUrl}`);
@@ -1103,10 +1071,19 @@
 		});
 
 		socket.on('room-peers', (data) => {
-			console.log('Room peers:', data);
+			console.log('🎉 Room peers event received:', data);
+			roomCode = data.roomId || roomCode;
+			displayName = data.name || displayName;
+
+			// Transition to call screen
+			setupScreen.classList.add('hidden');
+			callScreen.classList.remove('hidden');
+
 			if (data.peers && data.peers.length > 0) {
+				console.log(`📊 Found ${data.peers.length} existing peers in room`);
 				data.peers.forEach(peer => {
 					if (peer.id !== socket.id) {
+						console.log(`👤 Creating connection to peer: ${peer.id} (${peer.name})`);
 						addParticipant(peer.id, peer.name);
 						if (!peerConnections[peer.id]) {
 							const peerConnection = createPeerConnection(peer.id, peer.name);
@@ -1118,10 +1095,13 @@
 									sdp: peerConnection.localDescription,
 									name: displayName
 								});
+								console.log(`📤 Sent offer to ${peer.id}`);
 							}).catch(error => console.error('Error creating offer:', error));
 						}
 					}
 				});
+			} else {
+				console.log('⏳ No existing peers. Waiting for others to join...');
 			}
 		});
 
