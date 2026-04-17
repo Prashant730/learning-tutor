@@ -895,7 +895,7 @@
 
 		// ── Connect to backend via Socket.io ──
 		function connectToServer() {
-			socket = io('http://localhost:3000', {
+			socket = io('https://learning-tutor-api.onrender.com', {
 				reconnection: true,
 				reconnectionDelay: 1000,
 				reconnectionDelayMax: 5000,
