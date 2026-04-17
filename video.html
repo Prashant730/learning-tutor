@@ -635,7 +635,9 @@
 					}
 					try {
 						log('info', `Setting remote description from offer...`);
-						await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+					const remoteDesc = new RTCSessionDescription(data.sdp);
+					log('info', `Remote description object: type=${remoteDesc.type}`);
+					await pc.setRemoteDescription(remoteDesc);
 						log('info', `Remote description set, creating answer...`);
 						const answer = await pc.createAnswer();
 						log('info', `Answer created, setting local description...`);
@@ -660,34 +662,40 @@
 					}
 					try {
 						log('info', `Setting remote description from answer...`);
-						await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+					const remoteDesc = new RTCSessionDescription(data.sdp);
+					log('info', `Remote description object: type=${remoteDesc.type}`);
+					await pc.setRemoteDescription(remoteDesc);
 						log('success', `Answer applied successfully`);
 						log('info', `Connection state: ${pc.connectionState}, ICE state: ${pc.iceConnectionState}`);
-					} catch (e) {
-						log('error', `Failed to apply answer: ${e.message}`);
-						console.error('Answer error:', e);
-			});
+				} catch (e) {
+					log('error', `Failed to apply answer: ${e.message}`);
+					console.error('Answer error:', e);
+				}
+			}
+		});
 
-			state.socket.on('ice-candidate', async (data) => {
-				const pc = state.peerConnections[data.from];
-					if (!pc) {
-						log('warn', `Received ICE candidate but no peer connection for ${data.from}`);
-						return;
-					}
-					if (!data.candidate) {
-						log('info', `Received null ICE candidate (end of candidates)`);
-						return;
-					}
-					try {
-						await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-						log('info', `ICE candidate added from ${data.from}`);
-					} catch (e) {
-						log('warn', `Failed to add ICE candidate: ${e.message}`);
+		state.socket.on('ice-candidate', async (data) => {
+			const pc = state.peerConnections[data.from];
+			if (!pc) {
+				log('warn', `Received ICE candidate but no peer connection for ${data.from}`);
+				return;
+			}
+			if (!data.candidate) {
+				log('info', `Received null ICE candidate (end of candidates)`);
+				return;
+			}
+			try {
+				await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+				log('info', `ICE candidate added from ${data.from}`);
+			} catch (e) {
+				log('warn', `Failed to add ICE candidate: ${e.message}`);
+			}
+		});
 
-			state.socket.on('disconnect', () => {
-				log('error', 'Disconnected from server');
-			});
-		}
+		state.socket.on('disconnect', () => {
+			log('error', 'Disconnected from server');
+		});
+	}
 
 		async function getLocalStream() {
 			if (state.localStream) return state.localStream;
@@ -747,16 +755,17 @@
 			};
 
 			pc.ontrack = (event) => {
-					log('success', `Received remote ${event.track.kind} track from ${peerName}`);
-					if (event.streams && event.streams.length > 0) {
-						log('info', `Track stream available, setting remote video source`);
-						els.remoteVideo.srcObject = event.streams[0];
-						els.remotePlaceholder.classList.add('hidden');
-						log('success', `Remote video displayed from ${peerName}`);
-					} else if (event.track) {
-						log('warn', `Track received but no streams. Creating MediaStream manually...`);
-						const stream = new MediaStream([event.track]);
-						els.remoteVideo.srcObject = stream;
+				log('success', `Received remote ${event.track.kind} track from ${peerName}`);
+				if (event.streams && event.streams.length > 0) {
+					log('info', `Track stream available, setting remote video source`);
+					els.remoteVideo.srcObject = event.streams[0];
+					els.remotePlaceholder.classList.add('hidden');
+					log('success', `Remote video displayed from ${peerName}`);
+				} else if (event.track) {
+					log('warn', `Track received but no streams. Creating MediaStream manually...`);
+					const stream = new MediaStream([event.track]);
+					els.remoteVideo.srcObject = stream;
+					els.remotePlaceholder.classList.add('hidden');
 				}
 			};
 
