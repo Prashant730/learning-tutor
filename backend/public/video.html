@@ -817,7 +817,9 @@
 		let candidateTimeout = null;
 		let localCandidatesGathered = false;
 		let pendingOutgoingIceCandidates = [];
-		let pendingIncomingIceCandidates = [];
+		let pendingIncomingIceCandidates = {};
+		let peerConnections = {};
+		let localUserId = null;
 
 		// ── Update status ──
 		function setStatus(text, state = 'pending') {
@@ -844,20 +846,25 @@
 			});
 		}
 
-		async function flushIncomingIceCandidates() {
-			if (!peerConnection || !peerConnection.remoteDescription || pendingIncomingIceCandidates.length === 0) {
+		async function flushIncomingIceCandidates(peerId) {
+			if (!peerId || !pendingIncomingIceCandidates[peerId] || pendingIncomingIceCandidates[peerId].length === 0) {
 				return;
 			}
 
-			const queuedCandidates = [...pendingIncomingIceCandidates];
-			pendingIncomingIceCandidates = [];
+			const peerConnection = peerConnections[peerId];
+			if (!peerConnection) {
+				return;
+			}
+
+			const queuedCandidates = [...pendingIncomingIceCandidates[peerId]];
+			pendingIncomingIceCandidates[peerId] = [];
 
 			for (const candidate of queuedCandidates) {
 				try {
-					await peerConnection.addIceCandidate(candidate);
-					console.log('✅ Queued ICE candidate added');
+					await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+					console.log(`✅ Queued ICE candidate added for ${peerId}`);
 				} catch (error) {
-					console.warn('⚠️ Failed to add queued ICE candidate:', error.message);
+					console.warn(`⚠️ Failed to add queued ICE candidate for ${peerId}:`, error.message);
 				}
 			}
 		}
@@ -960,6 +967,161 @@
 			});
 
 			return peerConnection;
+		}
+
+		function addParticipant(peerId, name, stream) {
+			console.log(`Adding participant: ${peerId} (${name})`);
+			const participantsList = document.getElementById('participants-list');
+			if (!participantsList) return;
+
+			const existingParticipant = document.getElementById(`participant-${peerId}`);
+			if (existingParticipant) {
+				console.log(`Participant ${peerId} already in list`);
+				return;
+			}
+
+			const participantDiv = document.createElement('div');
+			participantDiv.className = 'participant-row';
+			participantDiv.id = `participant-${peerId}`;
+			participantDiv.innerHTML = `
+				<div class="participant-row-header">
+					<div class="participant-name">${name || 'Unknown'}</div>
+					<div class="participant-status">Connected</div>
+				</div>
+				<div class="participant-metadata">
+					<span class="meta-pill">Video</span>
+					<span class="meta-pill">Audio</span>
+				</div>
+			`;
+			participantsList.appendChild(participantDiv);
+
+			if (stream && document.getElementById('remote-video')) {
+				document.getElementById('remote-video').srcObject = stream;
+				document.getElementById('remote-placeholder').style.display = 'none';
+			}
+		}
+
+		async function connectToServer(roomId, name, isInitialConnection = false) {
+			const backendUrl = await resolveBackendUrl();
+			console.log(`Attempting to connect to server at ${backendUrl}`);
+
+			socket = io(backendUrl, {
+				transports: ['websocket', 'polling']
+			});
+
+			socket.on('connect', () => {
+				console.log('✅ Successfully connected to signaling server!');
+				setStatus('Connected', 'connected');
+				localUserId = socket.id;
+
+				// If this is just the initial page load connection, we don't need to create/join a room yet.
+				if (isInitialConnection) {
+					console.log('Initial connection established. Ready for user action.');
+					return;
+				}
+
+				// If it's not an initial connection, proceed with creating or joining a room.
+				if (roomId) {
+					console.log(`Joining room: ${roomId} as ${name}`);
+					socket.emit('join-room', { roomId, name });
+				} else {
+					console.log(`Creating a new room as ${name}`);
+					socket.emit('create-room', { name });
+				}
+			});
+
+			socket.on('room-created', (data) => {
+				console.log('Room created:', data);
+				roomCode = data.roomId;
+				displayName = data.name;
+				document.getElementById('share-room-code').textContent = roomCode;
+				setupScreen.classList.add('hidden');
+				callScreen.classList.remove('hidden');
+			});
+
+			socket.on('room-joined', (data) => {
+				console.log('Successfully joined room:', data);
+				roomCode = data.roomId;
+				displayName = data.name;
+				setupScreen.classList.add('hidden');
+				callScreen.classList.remove('hidden');
+			});
+
+			socket.on('room-peers', (data) => {
+				console.log('Room peers:', data);
+				if (data.peers && data.peers.length > 0) {
+					data.peers.forEach(peer => {
+						if (peer.id !== socket.id) {
+							addParticipant(peer.id, peer.name);
+							if (!peerConnections[peer.id]) {
+								const peerConnection = createPeerConnection(peer.id, peer.name);
+								peerConnection.createOffer().then(offer => {
+									return peerConnection.setLocalDescription(offer);
+								}).then(() => {
+									socket.emit('offer', {
+										target: peer.id,
+										sdp: peerConnection.localDescription,
+										name: displayName
+									});
+								}).catch(error => console.error('Error creating offer:', error));
+							}
+						}
+					});
+				}
+			});
+
+			socket.on('peer-joined', (data) => {
+				console.log('Peer joined:', data);
+				if (data.id !== socket.id) {
+					addParticipant(data.id, data.name);
+				}
+			});
+
+			socket.on('offer', async (data) => {
+				console.log('Received offer from:', data.from);
+				if (!peerConnections[data.from]) {
+					const peerConnection = createPeerConnection(data.from, data.name);
+					peerConnections[data.from] = peerConnection;
+				}
+
+				const peerConnection = peerConnections[data.from];
+				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+			await flushIncomingIceCandidates(data.from);
+				await peerConnection.setLocalDescription(answer);
+				socket.emit('answer', {
+					target: data.from,
+					sdp: peerConnection.localDescription,
+					name: displayName
+				});
+			});
+
+			socket.on('answer', async (data) => {
+				console.log('Received answer from:', data.from);
+				const peerConnection = peerConnections[data.from];
+				if (peerConnection) {
+					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+					await flushIncomingIceCandidates();
+				}
+			});
+
+			socket.on('ice-candidate', (data) => {
+				const peerConnection = peerConnections[data.from];
+				if (peerConnection) {
+					if (peerConnection.remoteDescription) {
+						peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(error => {
+							console.error('Error adding ICE candidate:', error);
+						});
+					} else {
+						pendingIncomingIceCandidates[data.from] = pendingIncomingIceCandidates[data.from] || [];
+						pendingIncomingIceCandidates[data.from].push(data.candidate);
+					}
+				}
+			});
+
+			socket.on('disconnect', () => {
+				console.log('Disconnected from signaling server');
+				setStatus('Disconnected', 'error');
+			});
 		}
 
 		function addParticipant(peerId, name, stream) {
