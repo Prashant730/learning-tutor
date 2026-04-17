@@ -559,19 +559,104 @@
 				els.roomInfo.classList.remove('hidden');
 			});
 
-			state.socket.on('room-joined', () => {
+			state.socket.on('room-joined', (data) => {
 				log('success', 'Joined room');
+				state.roomCode = data.roomId;
 				showCallScreen();
 			});
 
-			state.socket.on('peer-joined', (data) => {
-				log('info', `Peer joined: ${data.name}`);
-				addParticipant(data.id, data.name);
+			state.socket.on('room-peers', async (data) => {
+				log('info', `Room peers received: ${data.peers.length} peer(s)`);
+				for (const peer of data.peers) {
+					if (peer.id !== state.socket.id) {
+						addParticipant(peer.id, peer.name);
+						const pc = createPeerConnection(peer.id, peer.name);
+						try {
+							const offer = await pc.createOffer();
+							await pc.setLocalDescription(offer);
+							state.socket.emit('offer', {
+								to: peer.id,
+								from: state.socket.id,
+								sdp: pc.localDescription,
+								name: state.displayName
+							});
+							log('info', `Offer sent to ${peer.name}`);
+						} catch (e) {
+							log('error', `Failed to create offer: ${e.message}`);
+						}
+					}
+				}
 			});
 
-			state.socket.on('offer', handleOffer);
-			state.socket.on('answer', handleAnswer);
-			state.socket.on('ice-candidate', handleIceCandidate);
+			state.socket.on('peer-joined', async (data) => {
+				log('info', `Peer joined: ${data.name}`);
+				addParticipant(data.id, data.name);
+
+				// Create peer connection and send offer
+				if (!state.peerConnections[data.id]) {
+					const pc = createPeerConnection(data.id, data.name);
+					try {
+						const offer = await pc.createOffer();
+						await pc.setLocalDescription(offer);
+						state.socket.emit('offer', {
+							to: data.id,
+							from: state.socket.id,
+							sdp: pc.localDescription,
+							name: state.displayName
+						});
+						log('info', `Offer sent to new peer ${data.name}`);
+					} catch (e) {
+						log('error', `Failed to create offer: ${e.message}`);
+					}
+				}
+			});
+
+			state.socket.on('offer', async (data) => {
+				log('info', `Offer received from ${data.name}`);
+				if (!state.peerConnections[data.from]) {
+					createPeerConnection(data.from, data.name);
+				}
+				const pc = state.peerConnections[data.from];
+				try {
+					await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+					const answer = await pc.createAnswer();
+					await pc.setLocalDescription(answer);
+					state.socket.emit('answer', {
+						to: data.from,
+						from: state.socket.id,
+						sdp: pc.localDescription
+					});
+					log('info', `Answer sent to ${data.name}`);
+				} catch (e) {
+					log('error', `Failed to handle offer: ${e.message}`);
+				}
+			});
+
+			state.socket.on('answer', async (data) => {
+				log('info', `Answer received from peer`);
+				const pc = state.peerConnections[data.from];
+				if (pc) {
+					try {
+						await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+						log('info', `Answer applied successfully`);
+					} catch (e) {
+						log('error', `Failed to apply answer: ${e.message}`);
+					}
+				}
+			});
+
+			state.socket.on('ice-candidate', async (data) => {
+				const pc = state.peerConnections[data.from];
+				if (pc && data.candidate) {
+					try {
+						await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+						log('info', `ICE candidate added`);
+					} catch (e) {
+						log('warn', `Failed to add ICE candidate: ${e.message}`);
+					}
+				}
+			});
+
 			state.socket.on('disconnect', () => {
 				log('error', 'Disconnected from server');
 			});
@@ -598,10 +683,15 @@
 		}
 
 		function createPeerConnection(peerId, peerName) {
+			if (state.peerConnections[peerId]) {
+				return state.peerConnections[peerId];
+			}
+
 			const config = {
 				iceServers: [
 					{ urls: 'stun:stun.l.google.com:19302' },
-					{ urls: 'stun:stun1.l.google.com:19302' }
+					{ urls: 'stun:stun1.l.google.com:19302' },
+					{ urls: 'stun:stun2.l.google.com:19302' }
 				]
 			};
 
@@ -611,55 +701,44 @@
 				if (event.candidate) {
 					state.socket.emit('ice-candidate', {
 						to: peerId,
+						from: state.socket.id,
 						candidate: event.candidate
 					});
+					log('info', `ICE candidate sent to ${peerName}`);
 				}
+			};
+
+			pc.onconnectionstatechange = () => {
+				log('info', `Connection state: ${pc.connectionState}`);
+			};
+
+			pc.oniceconnectionstatechange = () => {
+				log('info', `ICE connection state: ${pc.iceConnectionState}`);
 			};
 
 			pc.ontrack = (event) => {
-				log('info', `Received track from ${peerName}`);
-				els.remoteVideo.srcObject = event.streams[0];
-				els.remotePlaceholder.classList.add('hidden');
+				log('success', `Received remote track from ${peerName}`);
+				if (event.streams && event.streams.length > 0) {
+					els.remoteVideo.srcObject = event.streams[0];
+					els.remotePlaceholder.classList.add('hidden');
+				}
+			};
+
+			pc.onicecandidateerror = (event) => {
+				log('warn', `ICE candidate error: ${event.errorText}`);
 			};
 
 			// Add local tracks
-			state.localStream.getTracks().forEach(track => {
-				pc.addTrack(track, state.localStream);
-			});
+			if (state.localStream) {
+				state.localStream.getTracks().forEach(track => {
+					pc.addTrack(track, state.localStream);
+					log('info', `Added local ${track.kind} track to peer connection`);
+				});
+			}
 
 			state.peerConnections[peerId] = pc;
+			log('info', `Peer connection created for ${peerName}`);
 			return pc;
-		}
-
-		async function handleOffer(data) {
-			const pc = createPeerConnection(data.from, data.name);
-			await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-
-			const answer = await pc.createAnswer();
-			await pc.setLocalDescription(answer);
-
-			state.socket.emit('answer', {
-				to: data.from,
-				sdp: pc.localDescription
-			});
-		}
-
-		async function handleAnswer(data) {
-			const pc = state.peerConnections[data.from];
-			if (pc) {
-				await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-			}
-		}
-
-		async function handleIceCandidate(data) {
-			const pc = state.peerConnections[data.from];
-			if (pc && data.candidate) {
-				try {
-					await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-				} catch (e) {
-					log('warn', 'ICE candidate failed');
-				}
-			}
 		}
 
 		function addParticipant(id, name) {
