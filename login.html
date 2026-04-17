@@ -529,8 +529,11 @@
 
   <script src="api.js"></script>
   <script>
-    // Redirect if already logged in
-    if (isLoggedIn()) window.location.href = 'dashboard.html';
+    // Wait for DOM and api.js to load before checking auth
+    document.addEventListener('DOMContentLoaded', () => {
+      // Redirect if already logged in
+      if (isLoggedIn()) window.location.href = 'dashboard.html';
+    });
 
     let selectedRole = 'student';
 

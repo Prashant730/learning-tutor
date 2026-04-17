@@ -135,11 +135,13 @@ io.on('connection', (socket) => {
 
   // WebRTC offer
   socket.on('offer', ({ to, offer }) => {
+    console.log(`Offer from ${socket.id} to ${to}`)
     io.to(to).emit('offer', { from: socket.id, name: socket.userName, offer })
   })
 
   // WebRTC answer
   socket.on('answer', ({ to, answer }) => {
+    console.log(`Answer from ${socket.id} to ${to}`)
     io.to(to).emit('answer', { from: socket.id, answer })
   })
 

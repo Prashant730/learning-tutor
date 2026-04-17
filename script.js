@@ -313,6 +313,30 @@ function initDashboard() {
 // Initialize dashboard functionality on page load
 document.addEventListener('DOMContentLoaded', initDashboard)
 
+// Load socket.io library dynamically from backend
+function loadSocketIO() {
+  return new Promise((resolve, reject) => {
+    const backendUrl = window.BACKEND_URL || 'http://localhost:3000'
+    const script = document.createElement('script')
+    script.src = `${backendUrl}/socket.io/socket.io.js`
+    script.async = true
+    script.onload = () => {
+      if (window.io && typeof window.io === 'function') {
+        console.log('Socket.io library loaded successfully')
+        resolve(window.io)
+      } else {
+        reject(new Error('Socket.io library loaded but not accessible'))
+      }
+    }
+    script.onerror = () => {
+      const errorMsg = `Failed to load socket.io from ${script.src}`
+      console.error(errorMsg)
+      reject(new Error(errorMsg))
+    }
+    document.head.appendChild(script)
+  })
+}
+
 // Video call functionality
 function initVideoCall() {
   const joinBtn = document.getElementById('join-call-btn')
@@ -339,7 +363,6 @@ function initVideoCall() {
 
   if (!joinBtn || !createBtn || !setupScreen || !callScreen) return
 
-  const socketFactory = window.io
   let socket = null
   let localStream = null
   let peerConnection = null
@@ -382,7 +405,8 @@ function initVideoCall() {
 
   async function loadWebRtcConfig() {
     try {
-      const response = await fetch('/api/webrtc-config')
+      const backendUrl = window.BACKEND_URL || 'http://localhost:3000'
+      const response = await fetch(`${backendUrl}/api/webrtc-config`)
       if (!response.ok) return
 
       const data = await response.json()
@@ -598,26 +622,45 @@ function initVideoCall() {
   async function createOffer() {
     if (!peerConnection || !currentPeerId) return
 
-    const offer = await peerConnection.createOffer()
-    await peerConnection.setLocalDescription(offer)
+    try {
+      const offer = await peerConnection.createOffer()
+      await peerConnection.setLocalDescription(offer)
 
-    socket.emit('offer', {
-      to: currentPeerId,
-      offer,
-    })
+      socket.emit('offer', {
+        to: currentPeerId,
+        offer,
+      })
+    } catch (error) {
+      console.error('Failed to create offer:', error)
+      setStatus('Failed to create offer: ' + error.message, 'error')
+    }
   }
 
   async function handlePeerSignal(peerId, shouldInitiate = false) {
     currentPeerId = peerId
-    createPeerConnection()
+    const pc = createPeerConnection()
 
     if (shouldInitiate) {
+      // Small delay to ensure peer connection is ready
+      await new Promise((resolve) => setTimeout(resolve, 100))
       await createOffer()
     }
   }
 
   async function launchCall(roomCodeOverride, mode = 'join') {
-    if (!socketFactory || typeof socketFactory !== 'function') {
+    // Load socket.io library if not already loaded
+    if (!window.io || typeof window.io !== 'function') {
+      try {
+        setStatus('Loading socket.io...', 'pending')
+        await loadSocketIO()
+      } catch (error) {
+        console.error('Failed to load socket.io:', error)
+        setStatus('Failed to connect: ' + error.message, 'error')
+        return
+      }
+    }
+
+    if (!window.io || typeof window.io !== 'function') {
       setStatus('Socket client not available', 'error')
       return
     }
@@ -654,9 +697,17 @@ function initVideoCall() {
       return
     }
 
-    socket = socketFactory()
+    // Connect to backend socket.io server (default: localhost:3000)
+    const backendUrl = window.BACKEND_URL || 'http://localhost:3000'
+    socket = window.io(backendUrl, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+    })
 
     socket.on('connect', () => {
+      console.log('Socket.io connected:', socket.id)
       socket.emit('join-room', {
         roomCode: currentRoomCode,
         userName: getDisplayName(),
@@ -664,78 +715,99 @@ function initVideoCall() {
       setStatus('Connected to room', 'pending')
     })
 
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error)
+      setStatus('Connection error: ' + error.message, 'error')
+    })
+
     socket.on('room-peers', async (peers) => {
-      const peer = peers?.[0]
-      if (peer) {
-        upsertParticipant(peer.id, {
-          name: peer.name || 'Peer',
-          order: 1,
-          isLocal: false,
-          online: true,
-          connected: true,
-        })
-        upsertParticipant('local', {
-          name: getDisplayName(),
-          order: 2,
-          isLocal: true,
-          online: true,
-          connected: true,
-        })
-        await handlePeerSignal(peer.id, true)
-        setStatus(`Joining as ${getDisplayName()}`, 'pending')
-      } else {
-        upsertParticipant('local', {
-          name: getDisplayName(),
-          order: 1,
-          isLocal: true,
-          online: true,
-          connected: true,
-        })
-        if (mode === 'create')
-          setStatus('Waiting for another participant', 'pending')
+      try {
+        const peer = peers?.[0]
+        if (peer) {
+          upsertParticipant(peer.id, {
+            name: peer.name || 'Peer',
+            order: 1,
+            isLocal: false,
+            online: true,
+            connected: true,
+          })
+          upsertParticipant('local', {
+            name: getDisplayName(),
+            order: 2,
+            isLocal: true,
+            online: true,
+            connected: true,
+          })
+          await handlePeerSignal(peer.id, true)
+          setStatus(`Joining as ${getDisplayName()}`, 'pending')
+        } else {
+          upsertParticipant('local', {
+            name: getDisplayName(),
+            order: 1,
+            isLocal: true,
+            online: true,
+            connected: true,
+          })
+          if (mode === 'create')
+            setStatus('Waiting for another participant', 'pending')
+        }
+      } catch (error) {
+        console.error('Error handling room-peers event:', error)
+        setStatus('Error joining room: ' + error.message, 'error')
       }
     })
 
     socket.on('peer-joined', async ({ id, name }) => {
-      if (!currentPeerId) {
-        upsertParticipant(id, {
-          name: name || 'Peer',
-          order: 2,
-          isLocal: false,
-          online: true,
-          connected: true,
-        })
-        await handlePeerSignal(id, false)
+      try {
+        if (!currentPeerId) {
+          upsertParticipant(id, {
+            name: name || 'Peer',
+            order: 2,
+            isLocal: false,
+            online: true,
+            connected: true,
+          })
+          await handlePeerSignal(id, false)
+        }
+        setStatus('Peer joined the room', 'pending')
+      } catch (error) {
+        console.error('Error handling peer-joined event:', error)
+        setStatus('Error with peer: ' + error.message, 'error')
       }
-      setStatus('Peer joined the room', 'pending')
     })
 
     socket.on('offer', async ({ from, offer }) => {
-      currentPeerId = from
-      createPeerConnection()
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(offer),
-      )
-      const answer = await peerConnection.createAnswer()
-      await peerConnection.setLocalDescription(answer)
-      socket.emit('answer', {
-        to: from,
-        answer,
-      })
+      try {
+        currentPeerId = from
+        createPeerConnection()
+        await peerConnection.setRemoteDescription(offer)
+        const answer = await peerConnection.createAnswer()
+        await peerConnection.setLocalDescription(answer)
+        socket.emit('answer', {
+          to: from,
+          answer,
+        })
+      } catch (error) {
+        console.error('Error handling offer:', error)
+        setStatus('Error during offer handling: ' + error.message, 'error')
+      }
     })
 
     socket.on('answer', async ({ answer }) => {
-      if (!peerConnection) return
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(answer),
-      )
-      setStatus('Connected', 'connected')
+      try {
+        if (!peerConnection) return
+        await peerConnection.setRemoteDescription(answer)
+        setStatus('Connected', 'connected')
+      } catch (error) {
+        console.error('Error handling answer:', error)
+        setStatus('Error during answer handling: ' + error.message, 'error')
+      }
     })
 
     socket.on('ice-candidate', async ({ candidate }) => {
       if (peerConnection && candidate) {
         try {
-          await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+          await peerConnection.addIceCandidate(candidate)
         } catch (error) {
           console.error('Failed to add ICE candidate:', error)
         }
