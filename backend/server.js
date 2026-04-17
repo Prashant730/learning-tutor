@@ -19,6 +19,9 @@ const defaultOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:5500',
   'http://127.0.0.1:5500',
+  // FIX: Allow Vercel and GitHub Pages deployments
+  'https://learning-tutor-dusky.vercel.app',
+  'https://prashant730.github.io',
 ]
 
 const allowedOrigins = Array.from(
