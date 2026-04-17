@@ -557,6 +557,8 @@
 				state.roomCode = data.roomId;
 				els.roomCode.textContent = data.roomId;
 				els.roomInfo.classList.remove('hidden');
+				log('info', `Showing call screen for created room ${data.roomId}`);
+				showCallScreen();
 			});
 
 			state.socket.on('room-joined', (data) => {
@@ -567,13 +569,13 @@
 
 			state.socket.on('room-peers', async (data) => {
 				log('info', `Room peers received: ${data.peers.length} peer(s)`);
-				if (data.peers.length === 0) {
-					log('warn', 'No peers in room yet');
-					return;
-				}
-				for (const peer of data.peers) {
-					if (peer.id !== state.socket.id) {
-						log('info', `Processing peer: ${peer.name} (${peer.id})`);
+			if (!data.peers || data.peers.length === 0) {
+				log('warn', 'No peers in room yet - waiting for others to join');
+				return;
+			}
+			log('info', `Processing ${data.peers.length} peer(s) in room`);
+			for (const peer of data.peers) {
+				log('info', `Checking peer: ${peer.id} vs my socket: ${state.socket.id}`);
 						addParticipant(peer.id, peer.name);
 						const pc = createPeerConnection(peer.id, peer.name);
 						try {
@@ -699,6 +701,21 @@
 
 		state.socket.on('disconnect', () => {
 			log('error', 'Disconnected from server');
+		});
+
+		state.socket.on('peer-left', (data) => {
+			log('info', `Peer left: ${data.id}`);
+			if (state.peerConnections[data.id]) {
+				log('info', `Closing peer connection for ${data.id}`);
+				state.peerConnections[data.id].close();
+				delete state.peerConnections[data.id];
+			}
+			// Remove participant from list
+			const participantEl = document.getElementById(`participant-${data.id}`);
+			if (participantEl) {
+				participantEl.remove();
+			}
+			state.participants.delete(data.id);
 		});
 	}
 
@@ -838,9 +855,15 @@
 			if (!name) return alert('Enter your name');
 
 			state.displayName = name;
-			await getLocalStream();
+			log('info', `Creating room with name: ${name}`);
+			const stream = await getLocalStream();
+			if (!stream) {
+				log('error', 'Failed to get local stream, cannot create room');
+				return;
+			}
+			log('info', 'Emitting create-room event to server...');
 			state.socket.emit('create-room', { name });
-			showCallScreen();
+			// Don't call showCallScreen here - wait for room-created event
 		});
 
 		els.joinBtn.addEventListener('click', () => {
