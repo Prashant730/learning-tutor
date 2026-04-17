@@ -737,8 +737,33 @@
 		</div>
 	</div>
 
-	<script src="http://localhost:3000/socket.io/socket.io.js"></script>
+	<script src="https://learning-tutor-api.onrender.com/socket.io/socket.io.js"></script>
 	<script>
+		// Wait for Socket.io to load before initializing
+		function waitForSocketIO() {
+			return new Promise((resolve) => {
+				if (typeof io !== 'undefined') {
+					console.log('✅ Socket.io library already loaded');
+					resolve();
+				} else {
+					console.log('⏳ Waiting for Socket.io library to load...');
+					const checkInterval = setInterval(() => {
+						if (typeof io !== 'undefined') {
+							clearInterval(checkInterval);
+							console.log('✅ Socket.io library loaded successfully');
+							resolve();
+						}
+					}, 100);
+					// Timeout after 5 seconds
+					setTimeout(() => {
+						clearInterval(checkInterval);
+						console.error('❌ Socket.io library timeout');
+						resolve();
+					}, 5000);
+				}
+			});
+		}
+
 		// ── Room / call state ──
 		let roomCode = '';
 		let displayName = '';
@@ -753,6 +778,11 @@
 		const callScreen = document.getElementById('call-screen');
 		const statusDot = document.getElementById('status-dot');
 		const statusText = document.getElementById('status-text');
+
+		// Debug logging
+		console.log('✅ Video call page loaded');
+		console.log('🔗 Backend URL: https://learning-tutor-api.onrender.com');
+		console.log('📡 Socket.io library status:', typeof io !== 'undefined' ? 'Loaded ✅' : 'Loading...');
 
 		const rtcConfig = {
 			iceServers: [
@@ -894,7 +924,20 @@
 		}
 
 		// ── Connect to backend via Socket.io ──
-		function connectToServer() {
+		async function connectToServer() {
+			console.log('🔌 Starting Socket.io connection to: https://learning-tutor-api.onrender.com');
+			
+			// Wait for Socket.io library to load
+			await waitForSocketIO();
+
+			if (typeof io === 'undefined') {
+				console.error('❌ Socket.io library failed to load');
+				setStatus('Failed to load Socket.io library', 'error');
+				console.error('Socket.io not loaded');
+				return;
+			}
+
+			console.log('📡 Creating Socket.io connection...');
 			socket = io('https://learning-tutor-api.onrender.com', {
 				reconnection: true,
 				reconnectionDelay: 1000,
@@ -903,7 +946,8 @@
 			});
 
 			socket.on('connect', () => {
-				console.log('Socket connected:', socket.id);
+				console.log('✅ Socket connected successfully! Socket ID:', socket.id);
+				console.log('📤 Joining room:', roomCode);
 				socket.emit('join-room', {
 					roomCode: roomCode,
 					userName: displayName
@@ -972,8 +1016,20 @@
 			});
 
 			socket.on('connect_error', (error) => {
-				console.error('Socket connection error:', error);
-				setStatus('Connection error: ' + error, 'error');
+				console.error('❌ Socket connection error:', error);
+				console.error('Error details:', {
+					type: error.type,
+					message: error.message,
+					data: error.data
+				});
+				setStatus('Connection error: ' + (error.message || 'Unknown error'), 'error');
+			});
+
+			socket.on('disconnect', (reason) => {
+				console.warn('⚠️ Socket disconnected:', reason);
+				if (reason === 'io server disconnect') {
+					setStatus('Server disconnected', 'error');
+				}
 			});
 		}
 
