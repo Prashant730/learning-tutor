@@ -448,7 +448,10 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
-      min-height: 260px;
+      /* aspect-ratio ensures the tile always has real height regardless of flex */
+      aspect-ratio: 16 / 9;
+      min-height: 240px;
+      width: 100%;
     }
 
     .video-tile video {
@@ -458,6 +461,8 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      /* Ensure the video element itself never collapses */
+      min-height: 100%;
     }
 
     /* Subtle inner glow on active tile */
@@ -1038,7 +1043,10 @@
           audio: { echoCancellation: true, noiseSuppression: true }
         });
         els.localVideo.srcObject = state.localStream;
-        els.localPlaceholder.classList.add('hidden');
+        els.localVideo.onloadedmetadata = () => {
+          els.localVideo.play().catch(() => { });
+          els.localPlaceholder.classList.add('hidden');
+        };
         log('success', 'Local stream acquired');
         return state.localStream;
       } catch (e) {
@@ -1076,9 +1084,11 @@
       pc.onconnectionstatechange = () => {
         log('info', `[${peerName}] connection: ${pc.connectionState}`);
         if (pc.connectionState === 'connected') {
-          if (els.remoteVideo.srcObject) {
-            els.remoteVideo.play().catch(() => { });
-            els.remotePlaceholder.classList.add('hidden');
+          // If video already has metadata (stream was attached before connection), play now
+          if (els.remoteVideo.srcObject && els.remoteVideo.readyState >= 1) {
+            els.remoteVideo.play()
+              .then(() => els.remotePlaceholder.classList.add('hidden'))
+              .catch(() => { });
             log('success', `[${peerName}] Connection established — remote video playing`);
           }
         }
@@ -1090,36 +1100,48 @@
 
       pc.oniceconnectionstatechange = () => {
         log('info', `[${peerName}] ICE: ${pc.iceConnectionState}`);
-        // FIX: On ICE connected/completed, ensure video is playing
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-          if (els.remoteVideo.srcObject) {
-            els.remoteVideo.play().catch(() => { });
-            els.remotePlaceholder.classList.add('hidden');
+          // Only play if metadata is already loaded — otherwise loadedmetadata handler will do it
+          if (els.remoteVideo.srcObject && els.remoteVideo.readyState >= 1) {
+            els.remoteVideo.play()
+              .then(() => els.remotePlaceholder.classList.add('hidden'))
+              .catch(() => { });
           }
         }
       };
 
-      // FIX: Robust ontrack — always build a stable MediaStream, set srcObject once,
-      // and ensure video plays when both audio+video tracks have arrived
+      // FIX: Set srcObject exactly ONCE via ontrack, then play only after
+      // loadedmetadata fires. Avoids "play() interrupted by new load request"
+      // which happens when srcObject is reassigned while a play() is in flight.
       const remoteStream = new MediaStream();
-      els.remoteVideo.srcObject = remoteStream;
+      let remoteAttached = false;
+
+      function attachRemoteStream(stream) {
+        if (els.remoteVideo.srcObject === stream) return;
+        els.remoteVideo.srcObject = stream;
+        els.remoteVideo.onloadedmetadata = () => {
+          els.remoteVideo.play()
+            .then(() => {
+              els.remotePlaceholder.classList.add('hidden');
+              log('success', `[${peerName}] Remote video playing`);
+            })
+            .catch(e => log('warn', `play() failed: ${e.message}`));
+        };
+      }
 
       pc.ontrack = (event) => {
         log('success', `Track received from ${peerName}: ${event.track.kind}`);
-
-        // Prefer adding from the event stream directly for stream continuity
         if (event.streams?.[0]) {
-          // Replace srcObject with the full stream from the event
-          els.remoteVideo.srcObject = event.streams[0];
+          // Use the browser-provided stream — most reliable, set srcObject once
+          attachRemoteStream(event.streams[0]);
         } else {
-          // Fallback: manually add track to our pre-built stream
+          // Fallback: accumulate tracks, attach stream only on first track
           remoteStream.addTrack(event.track);
-          els.remoteVideo.srcObject = remoteStream;
+          if (!remoteAttached) {
+            remoteAttached = true;
+            attachRemoteStream(remoteStream);
+          }
         }
-
-        // Always attempt play; browser may suppress autoplay until user gesture
-        els.remoteVideo.play().catch(e => log('warn', `play() suppressed: ${e.message}`));
-        els.remotePlaceholder.classList.add('hidden');
       };
 
       if (state.localStream) {
