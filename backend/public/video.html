@@ -1023,6 +1023,33 @@
 			if (e.key === 'c' || e.key === 'C') document.getElementById('camera-btn').click();
 			if (e.key === 'e' || e.key === 'E') document.getElementById('end-call-btn').click();
 		});
+
+		// Automatically connect when the page loads to establish a socket connection
+		createCallBtn.addEventListener('click', () => {
+			const name = nameInput.value.trim();
+			if (name) {
+				// The socket is already connected, so we just need to emit the event.
+				console.log(`Creating a new room as ${name}`);
+				socket.emit('create-room', { name });
+			} else {
+				alert('Please enter your name.');
+			}
+		});
+
+		joinCallBtn.addEventListener('click', () => {
+			const roomId = roomInput.value.trim();
+			const name = nameInput.value.trim();
+			if (roomId && name) {
+				// The socket is already connected, so we just need to emit the event.
+				console.log(`Joining room: ${roomId} as ${name}`);
+				socket.emit('join-room', { roomId, name });
+			} else {
+				alert('Please enter your name and a room code.');
+			}
+		});
+
+		// Automatically connect when the page loads to establish a socket connection
+		connectToServer(null, null, true);
 	</script>
 </body>
 
