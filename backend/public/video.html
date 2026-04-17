@@ -576,8 +576,8 @@
 			log('info', `Processing ${data.peers.length} peer(s) in room`);
 			for (const peer of data.peers) {
 				log('info', `Checking peer: ${peer.id} vs my socket: ${state.socket.id}`);
-						addParticipant(peer.id, peer.name);
-						const pc = createPeerConnection(peer.id, peer.name);
+				if (peer.id !== state.socket.id) {
+					log('info', `Processing peer: ${peer.name} (${peer.id})`);
 						try {
 							log('info', `Creating offer for ${peer.name}...`);
 							const offer = await pc.createOffer();
