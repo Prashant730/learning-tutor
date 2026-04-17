@@ -163,10 +163,13 @@ io.use((socket, next) => {
 })
 
 io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`)
+  console.log(`🔗 Socket connected: ${socket.id}`)
 
   // Create a new video room
   socket.on('create-room', ({ name }) => {
+    console.log(
+      `📍 Received create-room event from ${socket.id} with name: ${name}`,
+    )
     // Generate a simple room ID (you could use uuid for better uniqueness)
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase()
 
@@ -178,12 +181,15 @@ io.on('connection', (socket) => {
     rooms.get(roomId).set(socket.id, socket.userName)
 
     // Send room-created event back to the client
+    console.log(
+      `📤 Sending room-created event to ${socket.id}: roomId=${roomId}`,
+    )
     socket.emit('room-created', {
       roomId: roomId,
       name: socket.userName,
     })
 
-    console.log(`${socket.userName} created room ${roomId}`)
+    console.log(`✅ Room ${roomId} created by ${socket.userName}`)
   })
 
   // Join a video room

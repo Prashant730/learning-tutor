@@ -1031,11 +1031,11 @@
 			});
 
 			socket.on('room-created', (data) => {
-				console.log('Room created:', data);
-				roomCode = data.roomId;
-				displayName = data.name;
-				document.getElementById('share-room-code').textContent = roomCode;
-				setupScreen.classList.add('hidden');
+			console.log('🎉 Room created event received!', data);
+			roomCode = data.roomId;
+			displayName = data.name;
+			document.getElementById('share-room-code').textContent = roomCode;
+			console.log(`✅ Updated UI with room code: ${roomCode}`);
 				callScreen.classList.remove('hidden');
 			});
 
@@ -1188,9 +1188,15 @@
 		createCallBtn.addEventListener('click', () => {
 			const name = nameInput.value.trim();
 			if (name) {
-				// The socket is already connected, so we just need to emit the event.
-				console.log(`Creating a new room as ${name}`);
-				socket.emit('create-room', { name });
+				console.log(`📤 Button clicked: Creating room as ${name}`);
+				console.log(`Socket status: ${socket ? 'Connected' : 'Not connected'}`);
+				if (socket && socket.connected) {
+					console.log(`Emitting create-room event...`);
+					socket.emit('create-room', { name });
+				} else {
+					console.error('❌ Socket not connected! Cannot create room.');
+					alert('Connection not established. Please refresh the page.');
+				}
 			} else {
 				alert('Please enter your name.');
 			}
