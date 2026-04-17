@@ -786,13 +786,37 @@
 
 		const rtcConfig = {
 			iceServers: [
+				// STUN servers for NAT traversal
 				{ urls: 'stun:stun.l.google.com:19302' },
 				{ urls: 'stun:stun1.l.google.com:19302' },
 				{ urls: 'stun:stun2.l.google.com:19302' },
 				{ urls: 'stun:stun3.l.google.com:19302' },
-				{ urls: 'stun:stun4.l.google.com:19302' }
+				{ urls: 'stun:stun4.l.google.com:19302' },
+				// TURN servers for relay (when direct connection fails)
+				{
+					urls: 'turn:openrelay.metered.ca:80',
+					username: 'openrelayproject',
+					credential: 'openrelayproject'
+				},
+				{
+					urls: 'turn:openrelay.metered.ca:443',
+					username: 'openrelayproject',
+					credential: 'openrelayproject'
+				},
+				{
+					urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+					username: 'openrelayproject',
+					credential: 'openrelayproject'
+				},
+				{
+					urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+					username: 'openrelayproject',
+					credential: 'openrelayproject'
+				}
 			],
-			iceCandidatePoolSize: 10
+			iceCandidatePoolSize: 20,
+			bundlePolicy: 'max-bundle',
+			rtcpMuxPolicy: 'require'
 		};
 
 		// ── Update status ──
@@ -834,6 +858,9 @@
 
 			peerConnection.onconnectionstatechange = () => {
 				console.log('🔗 Connection state:', peerConnection.connectionState);
+				console.log('   ICE connection state:', peerConnection.iceConnectionState);
+				console.log('   ICE gathering state:', peerConnection.iceGatheringState);
+
 				if (peerConnection.connectionState === 'connected') {
 					console.log('✅ Peer connection established successfully!');
 					setStatus('Connected', 'connected');
@@ -841,13 +868,33 @@
 					console.log('⏳ Connecting to peer...');
 					setStatus('Connecting...', 'pending');
 				} else if (peerConnection.connectionState === 'failed') {
-					console.error('❌ Connection failed - will attempt ICE restart');
+					console.error('❌ Connection failed - analyzing ICE state...');
+					console.error('   Ice connection state:', peerConnection.iceConnectionState);
+					console.error('   Signaling state:', peerConnection.signalingState);
+
+					// Log ICE candidates gathered
+					const stats = peerConnection.getStats();
+					stats.then(report => {
+						report.forEach(stat => {
+							if (stat.type === 'candidate-pair' && stat.state === 'succeeded') {
+								console.log('✅ Working candidate pair found:', stat);
+							}
+						});
+					});
+
 					setStatus('Connection failed - retrying...', 'error');
-					// Attempt ICE restart
-					if (peerConnection) {
-						console.log('🔄 Attempting ICE restart...');
-						peerConnection.restartIce();
-					}
+					// Attempt ICE restart after short delay
+					setTimeout(() => {
+						if (peerConnection && peerConnection.connectionState === 'failed') {
+							console.log('🔄 Attempting ICE restart...');
+							try {
+								peerConnection.restartIce();
+								console.log('✅ ICE restart initiated');
+							} catch (e) {
+								console.error('❌ ICE restart failed:', e);
+							}
+						}
+					}, 2000);
 				} else if (peerConnection.connectionState === 'disconnected') {
 					console.warn('⚠️ Connection disconnected');
 					setStatus('Disconnected', 'pending');
@@ -855,6 +902,21 @@
 					console.warn('⚠️ Connection closed');
 					setStatus('Connection closed', 'error');
 				}
+			};
+
+			// Monitor ICE connection state for better diagnostics
+			peerConnection.oniceconnectionstatechange = () => {
+				console.log('❄️ ICE connection state:', peerConnection.iceConnectionState);
+				if (peerConnection.iceConnectionState === 'failed') {
+					console.error('❌ ICE connection failed - TURN relay may be needed');
+				} else if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
+					console.log('✅ ICE connection successful');
+				}
+			};
+
+			// Monitor ICE gathering state
+			peerConnection.onicegatheringstatechange = () => {
+				console.log('❄️ ICE gathering state:', peerConnection.iceGatheringState);
 			};
 
 			return peerConnection;
