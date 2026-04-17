@@ -846,15 +846,30 @@
 		async function createOffer() {
 			if (!peerConnection) return;
 			try {
+				console.log('📝 Creating WebRTC offer...');
 				const offer = await peerConnection.createOffer();
+				console.log('✅ Offer created:', offer);
+
+				console.log('📥 Setting local description...');
 				await peerConnection.setLocalDescription(offer);
+
+				console.log('📡 Sending offer to peer...');
 				socket.emit('offer', {
 					to: remotePeerId,
-					offer: offer
+					offer: {
+						type: 'offer',
+						sdp: offer.sdp
+					}
 				});
+				console.log('✅ Offer sent successfully');
 			} catch (e) {
-				console.error('Failed to create offer:', e);
-				setStatus('Failed to create offer', 'error');
+				console.error('❌ Failed to create offer:', e);
+				console.error('Error details:', {
+					name: e.name,
+					message: e.message,
+					stack: e.stack
+				});
+				setStatus('Failed to create offer: ' + e.message, 'error');
 			}
 		}
 
@@ -862,16 +877,40 @@
 		async function createAnswer(offer) {
 			if (!peerConnection) return;
 			try {
-				await peerConnection.setRemoteDescription(offer);
+				console.log('📝 Creating answer for offer:', offer);
+
+				// Ensure offer has proper type
+				const offerWithType = {
+					type: 'offer',
+					sdp: offer.sdp || offer
+				};
+
+				console.log('📥 Setting remote description with offer...');
+				await peerConnection.setRemoteDescription(offerWithType);
+
+				console.log('⏳ Creating answer...');
 				const answer = await peerConnection.createAnswer();
+
+				console.log('📤 Setting local description with answer...');
 				await peerConnection.setLocalDescription(answer);
+
+				console.log('📡 Sending answer back to peer...');
 				socket.emit('answer', {
 					to: remotePeerId,
-					answer: answer
+					answer: {
+						type: 'answer',
+						sdp: answer.sdp
+					}
 				});
+				console.log('✅ Answer sent successfully');
 			} catch (e) {
-				console.error('Failed to create answer:', e);
-				setStatus('Failed to create answer', 'error');
+				console.error('❌ Failed to create answer:', e);
+				console.error('Error details:', {
+					name: e.name,
+					message: e.message,
+					stack: e.stack
+				});
+				setStatus('Failed to create answer: ' + e.message, 'error');
 			}
 		}
 
@@ -926,7 +965,7 @@
 		// ── Connect to backend via Socket.io ──
 		async function connectToServer() {
 			console.log('🔌 Starting Socket.io connection to: https://learning-tutor-api.onrender.com');
-			
+
 			// Wait for Socket.io library to load
 			await waitForSocketIO();
 
@@ -987,18 +1026,43 @@
 			});
 
 			socket.on('answer', async ({ answer }) => {
-				console.log('Received answer');
+				console.log('📨 Received answer:', answer);
 				if (peerConnection) {
-					await peerConnection.setRemoteDescription(answer);
+					try {
+						// Ensure answer has proper type
+						const answerWithType = {
+							type: 'answer',
+							sdp: answer.sdp || answer
+						};
+						console.log('📥 Setting remote description with answer...');
+						await peerConnection.setRemoteDescription(answerWithType);
+						console.log('✅ Answer set successfully');
+					} catch (e) {
+						console.error('❌ Failed to set answer:', e);
+						console.error('Error details:', {
+							name: e.name,
+							message: e.message,
+							answer: answer
+						});
+						setStatus('Failed to set answer: ' + e.message, 'error');
+					}
+				} else {
+					console.warn('⚠️ No peer connection when answer received');
 				}
 			});
 
 			socket.on('ice-candidate', async ({ candidate }) => {
 				if (peerConnection && candidate) {
 					try {
+						console.log('❄️ Adding ICE candidate:', candidate);
 						await peerConnection.addIceCandidate(candidate);
+						console.log('✅ ICE candidate added');
 					} catch (e) {
-						console.error('Failed to add ICE candidate:', e);
+						console.warn('⚠️ Failed to add ICE candidate:', e.message);
+						// Don't treat ICE candidate errors as fatal
+					}
+				}
+			});
 					}
 				}
 			});
