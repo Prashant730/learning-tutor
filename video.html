@@ -740,6 +740,14 @@
 
 	<script src="https://learning-tutor-api.onrender.com/socket.io/socket.io.js"></script>
 	<script>
+		// ── DOM Element Selection ──
+		const createCallBtn = document.getElementById('create-call-btn');
+		const joinCallBtn = document.getElementById('join-call-btn');
+		const nameInput = document.getElementById('display-name-input');
+		const roomInput = document.getElementById('room-code-input');
+		const setupScreen = document.getElementById('setup-screen');
+		const callScreen = document.getElementById('call-screen');
+
 		// Wait for Socket.io to load before initializing
 		function waitForSocketIO() {
 			return new Promise((resolve) => {
