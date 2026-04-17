@@ -623,57 +623,55 @@
 			});
 
 			state.socket.on('offer', async (data) => {
-					log('info', `Offer received from ${data.name} (${data.from})`);
-					if (!state.peerConnections[data.from]) {
-						log('info', `Creating new peer connection for ${data.name}`);
-						createPeerConnection(data.from, data.name);
-					}
-					const pc = state.peerConnections[data.from];
-					if (!pc) {
-						log('error', `Peer connection not found for ${data.from}`);
-						return;
-					}
-					try {
-						log('info', `Setting remote description from offer...`);
-					const remoteDesc = new RTCSessionDescription(data.sdp);
-					log('info', `Remote description object: type=${remoteDesc.type}`);
-					await pc.setRemoteDescription(remoteDesc);
-						log('info', `Remote description set, creating answer...`);
-						const answer = await pc.createAnswer();
-						log('info', `Answer created, setting local description...`);
-						await pc.setLocalDescription(answer);
-						log('info', `Local description set, sending answer...`);
-						state.socket.emit('answer', {
-							target: data.from,
-							sdp: pc.localDescription
-						});
-						log('success', `Answer sent to ${data.name}`);
-					} catch (e) {
-						log('error', `Failed to handle offer: ${e.message}`);
-						console.error('Offer error:', e);
-			});
+			log('info', `Offer received from ${data.name} (${data.from})`);
+			if (!state.peerConnections[data.from]) {
+				log('info', `Creating new peer connection for ${data.name}`);
+				createPeerConnection(data.from, data.name);
+			}
+			const pc = state.peerConnections[data.from];
+			if (!pc) {
+				log('error', `Peer connection not found for ${data.from}`);
+				return;
+			}
+			try {
+				log('info', `Setting remote description from offer...`);
+				const remoteDesc = new RTCSessionDescription(data.sdp);
+				log('info', `Remote description object: type=${remoteDesc.type}`);
+				await pc.setRemoteDescription(remoteDesc);
+				log('info', `Remote description set, creating answer...`);
+				const answer = await pc.createAnswer();
+				log('info', `Answer created, setting local description...`);
+				await pc.setLocalDescription(answer);
+				log('info', `Local description set, sending answer...`);
+				state.socket.emit('answer', {
+					target: data.from,
+					sdp: pc.localDescription
+				});
+				log('success', `Answer sent to ${data.name}`);
+			} catch (e) {
+				log('error', `Failed to handle offer: ${e.message}`);
+				console.error('Offer error:', e);
+			}
 
 			state.socket.on('answer', async (data) => {
-					log('info', `Answer received from peer (${data.from})`);
-					const pc = state.peerConnections[data.from];
-					if (!pc) {
-						log('error', `Peer connection not found for ${data.from} when handling answer`);
-						return;
-					}
-					try {
-						log('info', `Setting remote description from answer...`);
-					const remoteDesc = new RTCSessionDescription(data.sdp);
-					log('info', `Remote description object: type=${remoteDesc.type}`);
-					await pc.setRemoteDescription(remoteDesc);
-						log('success', `Answer applied successfully`);
-						log('info', `Connection state: ${pc.connectionState}, ICE state: ${pc.iceConnectionState}`);
-				} catch (e) {
-					log('error', `Failed to apply answer: ${e.message}`);
-					console.error('Answer error:', e);
-				}
+			log('info', `Answer received from peer (${data.from})`);
+			const pc = state.peerConnections[data.from];
+			if (!pc) {
+				log('error', `Peer connection not found for ${data.from} when handling answer`);
+				return;
+			}
+			try {
+				log('info', `Setting remote description from answer...`);
+				const remoteDesc = new RTCSessionDescription(data.sdp);
+				log('info', `Remote description object: type=${remoteDesc.type}`);
+				await pc.setRemoteDescription(remoteDesc);
+				log('success', `Answer applied successfully`);
+				log('info', `Connection state: ${pc.connectionState}, ICE state: ${pc.iceConnectionState}`);
+			} catch (e) {
+				log('error', `Failed to apply answer: ${e.message}`);
+				console.error('Answer error:', e);
 			}
 		});
-
 		state.socket.on('ice-candidate', async (data) => {
 			const pc = state.peerConnections[data.from];
 			if (!pc) {
