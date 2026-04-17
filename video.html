@@ -576,36 +576,29 @@
 			log('info', `Processing ${data.peers.length} peer(s) in room`);
 			for (const peer of data.peers) {
 				log('info', `Checking peer: ${peer.id} vs my socket: ${state.socket.id}`);
-						addParticipant(peer.id, peer.name);
-						const pc = createPeerConnection(peer.id, peer.name);
-						try {
-							log('info', `Creating offer for ${peer.name}...`);
-							const offer = await pc.createOffer();
-							log('info', `Setting local description...`);
-							await pc.setLocalDescription(offer);
-							log('info', `Sending offer to ${peer.name}...`);
-							state.socket.emit('offer', {
-								target: peer.id,
-								sdp: pc.localDescription,
-								name: state.displayName
-							});
-							log('success', `Offer sent to ${peer.name}`);
-						} catch (e) {
-							log('error', `Failed to create offer: ${e.message}`);
-							console.error('Offer creation error:', e);
-						}
+				if (peer.id !== state.socket.id) {
+					log('info', `Processing peer: ${peer.name} (${peer.id})`);
+					addParticipant(peer.id, peer.name);
+					const pc = createPeerConnection(peer.id, peer.name);
+					try {
+						log('info', `Creating offer for ${peer.name}...`);
+						const offer = await pc.createOffer();
+						log('info', `Setting local description...`);
+						await pc.setLocalDescription(offer);
+						log('info', `Sending offer to ${peer.name}...`);
+						state.socket.emit('offer', {
+							target: peer.id,
+							sdp: pc.localDescription,
+							name: state.displayName
+						});
+						log('success', `Offer sent to ${peer.name}`);
+					} catch (e) {
+						log('error', `Failed to create offer: ${e.message}`);
+						console.error('Offer creation error:', e);
 					}
 				}
-			});
-
-			state.socket.on('peer-joined', async (data) => {
-				log('info', `Peer joined: ${data.name} (${data.id})`);
-				addParticipant(data.id, data.name);
-
-				// Create peer connection and send offer
-				if (!state.peerConnections[data.id]) {
-					const pc = createPeerConnection(data.id, data.name);
-					try {
+			}
+		});
 						log('info', `Creating offer for new peer ${data.name}...`);
 						const offer = await pc.createOffer();
 						log('info', `Setting local description for new peer...`);
