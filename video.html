@@ -567,92 +567,122 @@
 
 			state.socket.on('room-peers', async (data) => {
 				log('info', `Room peers received: ${data.peers.length} peer(s)`);
+				if (data.peers.length === 0) {
+					log('warn', 'No peers in room yet');
+					return;
+				}
 				for (const peer of data.peers) {
 					if (peer.id !== state.socket.id) {
+						log('info', `Processing peer: ${peer.name} (${peer.id})`);
 						addParticipant(peer.id, peer.name);
 						const pc = createPeerConnection(peer.id, peer.name);
 						try {
+							log('info', `Creating offer for ${peer.name}...`);
 							const offer = await pc.createOffer();
+							log('info', `Setting local description...`);
 							await pc.setLocalDescription(offer);
+							log('info', `Sending offer to ${peer.name}...`);
 							state.socket.emit('offer', {
 								target: peer.id,
 								sdp: pc.localDescription,
 								name: state.displayName
 							});
-							log('info', `Offer sent to ${peer.name}`);
+							log('success', `Offer sent to ${peer.name}`);
 						} catch (e) {
 							log('error', `Failed to create offer: ${e.message}`);
+							console.error('Offer creation error:', e);
 						}
 					}
 				}
 			});
 
 			state.socket.on('peer-joined', async (data) => {
-				log('info', `Peer joined: ${data.name}`);
+				log('info', `Peer joined: ${data.name} (${data.id})`);
 				addParticipant(data.id, data.name);
 
 				// Create peer connection and send offer
 				if (!state.peerConnections[data.id]) {
 					const pc = createPeerConnection(data.id, data.name);
 					try {
+						log('info', `Creating offer for new peer ${data.name}...`);
 						const offer = await pc.createOffer();
+						log('info', `Setting local description for new peer...`);
 						await pc.setLocalDescription(offer);
+						log('info', `Sending offer to new peer ${data.name}...`);
 						state.socket.emit('offer', {
 							target: data.id,
 							sdp: pc.localDescription,
 							name: state.displayName
 						});
-						log('info', `Offer sent to new peer ${data.name}`);
+						log('success', `Offer sent to new peer ${data.name}`);
 					} catch (e) {
-						log('error', `Failed to create offer: ${e.message}`);
+						log('error', `Failed to create offer for new peer: ${e.message}`);
+						console.error('New peer offer error:', e);
 					}
 				}
 			});
 
 			state.socket.on('offer', async (data) => {
-				log('info', `Offer received from ${data.name}`);
-				if (!state.peerConnections[data.from]) {
-					createPeerConnection(data.from, data.name);
-				}
-				const pc = state.peerConnections[data.from];
-				try {
-					await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-					const answer = await pc.createAnswer();
-					await pc.setLocalDescription(answer);
-					state.socket.emit('answer', {
-					target: data.from,
-						sdp: pc.localDescription
-					});
-					log('info', `Answer sent to ${data.name}`);
-				} catch (e) {
-					log('error', `Failed to handle offer: ${e.message}`);
-				}
+					log('info', `Offer received from ${data.name} (${data.from})`);
+					if (!state.peerConnections[data.from]) {
+						log('info', `Creating new peer connection for ${data.name}`);
+						createPeerConnection(data.from, data.name);
+					}
+					const pc = state.peerConnections[data.from];
+					if (!pc) {
+						log('error', `Peer connection not found for ${data.from}`);
+						return;
+					}
+					try {
+						log('info', `Setting remote description from offer...`);
+						await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+						log('info', `Remote description set, creating answer...`);
+						const answer = await pc.createAnswer();
+						log('info', `Answer created, setting local description...`);
+						await pc.setLocalDescription(answer);
+						log('info', `Local description set, sending answer...`);
+						state.socket.emit('answer', {
+							target: data.from,
+							sdp: pc.localDescription
+						});
+						log('success', `Answer sent to ${data.name}`);
+					} catch (e) {
+						log('error', `Failed to handle offer: ${e.message}`);
+						console.error('Offer error:', e);
 			});
 
 			state.socket.on('answer', async (data) => {
-				log('info', `Answer received from peer`);
-				const pc = state.peerConnections[data.from];
-				if (pc) {
+					log('info', `Answer received from peer (${data.from})`);
+					const pc = state.peerConnections[data.from];
+					if (!pc) {
+						log('error', `Peer connection not found for ${data.from} when handling answer`);
+						return;
+					}
 					try {
+						log('info', `Setting remote description from answer...`);
 						await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-						log('info', `Answer applied successfully`);
+						log('success', `Answer applied successfully`);
+						log('info', `Connection state: ${pc.connectionState}, ICE state: ${pc.iceConnectionState}`);
 					} catch (e) {
 						log('error', `Failed to apply answer: ${e.message}`);
-					}
-				}
+						console.error('Answer error:', e);
 			});
 
 			state.socket.on('ice-candidate', async (data) => {
 				const pc = state.peerConnections[data.from];
-				if (pc && data.candidate) {
+					if (!pc) {
+						log('warn', `Received ICE candidate but no peer connection for ${data.from}`);
+						return;
+					}
+					if (!data.candidate) {
+						log('info', `Received null ICE candidate (end of candidates)`);
+						return;
+					}
 					try {
 						await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-						log('info', `ICE candidate added`);
+						log('info', `ICE candidate added from ${data.from}`);
 					} catch (e) {
 						log('warn', `Failed to add ICE candidate: ${e.message}`);
-					}
-				}
-			});
 
 			state.socket.on('disconnect', () => {
 				log('error', 'Disconnected from server');
@@ -717,10 +747,16 @@
 			};
 
 			pc.ontrack = (event) => {
-				log('success', `Received remote track from ${peerName}`);
-				if (event.streams && event.streams.length > 0) {
-					els.remoteVideo.srcObject = event.streams[0];
-					els.remotePlaceholder.classList.add('hidden');
+					log('success', `Received remote ${event.track.kind} track from ${peerName}`);
+					if (event.streams && event.streams.length > 0) {
+						log('info', `Track stream available, setting remote video source`);
+						els.remoteVideo.srcObject = event.streams[0];
+						els.remotePlaceholder.classList.add('hidden');
+						log('success', `Remote video displayed from ${peerName}`);
+					} else if (event.track) {
+						log('warn', `Track received but no streams. Creating MediaStream manually...`);
+						const stream = new MediaStream([event.track]);
+						els.remoteVideo.srcObject = stream;
 				}
 			};
 
