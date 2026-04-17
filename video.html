@@ -930,6 +930,51 @@
 			return { ...baseRtcConfig };
 		}
 
+		// ── Get Local Media Stream ──
+		async function getLocalStream() {
+			if (localStream) {
+				console.log('✅ Local stream already exists');
+				return localStream;
+			}
+
+			try {
+				console.log('📷 Requesting camera and microphone access...');
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: {
+						width: { ideal: 1280 },
+						height: { ideal: 720 }
+					},
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true
+					}
+				});
+
+				localStream = stream;
+				console.log('✅ Local stream acquired successfully');
+
+				// Display local video
+				const localVideoElement = document.getElementById('local-video');
+				if (localVideoElement) {
+					localVideoElement.srcObject = localStream;
+					console.log('✅ Local video displayed');
+				}
+
+				// Hide local placeholder
+				const localPlaceholder = document.getElementById('local-placeholder');
+				if (localPlaceholder) {
+					localPlaceholder.style.display = 'none';
+				}
+
+				return localStream;
+			} catch (error) {
+				console.error('❌ Failed to get local stream:', error.message);
+				alert('Camera/microphone access denied. Please check your browser permissions.');
+				return null;
+			}
+		}
+
 		// ── Create RTCPeerConnection ──
 		function createPeerConnection(remotePeerId, name) {
 			console.log(`Creating peer connection for remote peer: ${remotePeerId} (${name})`);
@@ -1191,11 +1236,15 @@
 		});
 
 		// Automatically connect when the page loads to establish a socket connection
-		createCallBtn.addEventListener('click', () => {
+		createCallBtn.addEventListener('click', async () => {
 			const name = nameInput.value.trim();
 			if (name) {
 				console.log(`📤 Button clicked: Creating room as ${name}`);
 				console.log(`Socket status: ${socket ? 'Connected' : 'Not connected'}`);
+
+				// Get local stream first
+				await getLocalStream();
+
 				if (socket && socket.connected) {
 					console.log(`Emitting create-room event...`);
 					socket.emit('create-room', { name });
@@ -1208,11 +1257,13 @@
 			}
 		});
 
-		joinCallBtn.addEventListener('click', () => {
+		joinCallBtn.addEventListener('click', async () => {
 			const roomId = roomInput.value.trim();
 			const name = nameInput.value.trim();
 			if (roomId && name) {
-				// The socket is already connected, so we just need to emit the event.
+				// Get local stream first
+				await getLocalStream();
+
 				console.log(`Joining room: ${roomId} as ${name}`);
 				socket.emit('join-room', { roomId, name });
 			} else {
