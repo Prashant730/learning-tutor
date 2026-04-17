@@ -787,8 +787,12 @@
 		const rtcConfig = {
 			iceServers: [
 				{ urls: 'stun:stun.l.google.com:19302' },
-				{ urls: 'stun:stun1.l.google.com:19302' }
-			]
+				{ urls: 'stun:stun1.l.google.com:19302' },
+				{ urls: 'stun:stun2.l.google.com:19302' },
+				{ urls: 'stun:stun3.l.google.com:19302' },
+				{ urls: 'stun:stun4.l.google.com:19302' }
+			],
+			iceCandidatePoolSize: 10
 		};
 
 		// ── Update status ──
@@ -829,13 +833,27 @@
 			};
 
 			peerConnection.onconnectionstatechange = () => {
-				console.log('Connection state:', peerConnection.connectionState);
+				console.log('🔗 Connection state:', peerConnection.connectionState);
 				if (peerConnection.connectionState === 'connected') {
+					console.log('✅ Peer connection established successfully!');
 					setStatus('Connected', 'connected');
+				} else if (peerConnection.connectionState === 'connecting') {
+					console.log('⏳ Connecting to peer...');
+					setStatus('Connecting...', 'pending');
 				} else if (peerConnection.connectionState === 'failed') {
-					setStatus('Connection failed', 'error');
+					console.error('❌ Connection failed - will attempt ICE restart');
+					setStatus('Connection failed - retrying...', 'error');
+					// Attempt ICE restart
+					if (peerConnection) {
+						console.log('🔄 Attempting ICE restart...');
+						peerConnection.restartIce();
+					}
 				} else if (peerConnection.connectionState === 'disconnected') {
+					console.warn('⚠️ Connection disconnected');
 					setStatus('Disconnected', 'pending');
+				} else if (peerConnection.connectionState === 'closed') {
+					console.warn('⚠️ Connection closed');
+					setStatus('Connection closed', 'error');
 				}
 			};
 
@@ -1087,10 +1105,41 @@
 			});
 
 			socket.on('disconnect', (reason) => {
-				console.warn('⚠️ Socket disconnected:', reason);
+				console.warn('⚠️ Socket disconnected. Reason:', reason);
+
+				// Different handling based on disconnect reason
 				if (reason === 'io server disconnect') {
+					console.error('❌ Server forcefully disconnected');
 					setStatus('Server disconnected', 'error');
+				} else if (reason === 'transport close') {
+					console.warn('⚠️ Network transport closed - attempting to reconnect');
+					setStatus('Reconnecting...', 'pending');
+					// Keep peer connection alive - just reconnect socket
+				} else if (reason === 'transport error') {
+					console.error('❌ Transport error');
+					setStatus('Network error - reconnecting...', 'error');
+				} else {
+					console.warn('⚠️ Socket disconnected:', reason);
+					setStatus('Reconnecting...', 'pending');
 				}
+			});
+
+			// Socket reconnection events
+			socket.on('reconnect', () => {
+				console.log('✅ Socket reconnected successfully');
+				if (remotePeerId && peerConnection) {
+					console.log('🔄 Peer connection still active, resuming signaling');
+					setStatus('Connected', 'connected');
+				}
+			});
+
+			socket.on('reconnect_attempt', () => {
+				console.log('⏳ Attempting to reconnect socket...');
+			});
+
+			socket.on('reconnect_failed', () => {
+				console.error('❌ Failed to reconnect socket');
+				setStatus('Reconnection failed', 'error');
 			});
 		}
 
