@@ -1087,17 +1087,9 @@
 				const peerConnection = peerConnections[data.from];
 				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
 			await flushIncomingIceCandidates(data.from);
-				await peerConnection.setLocalDescription(answer);
-				socket.emit('answer', {
-					target: data.from,
-					sdp: peerConnection.localDescription,
-					name: displayName
-				});
-			});
 
-			socket.on('answer', async (data) => {
-				console.log('Received answer from:', data.from);
-				const peerConnection = peerConnections[data.from];
+			const answer = await peerConnection.createAnswer();
+			await peerConnection.setLocalDescription(answer);
 				if (peerConnection) {
 					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
 					await flushIncomingIceCandidates();
