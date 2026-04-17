@@ -887,16 +887,27 @@
 		}
 
 		async function resolveBackendUrl() {
-			for (const candidate of backendCandidates) {
-				const config = await fetchJsonWithTimeout(`${candidate}/api/webrtc-config`);
-				if (config) {
-					console.log('🔗 Backend resolved:', candidate);
-					return candidate;
+			// If we're on a deployed site, skip localhost URLs
+			const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+			const candidates = isLocalhost
+				? backendCandidates
+				: backendCandidates.filter(url => !url.includes('localhost') && !url.includes('127.0.0.1'));
+
+			for (const candidate of candidates) {
+				try {
+					const config = await fetchJsonWithTimeout(`${candidate}/api/webrtc-config`, 5000);
+					if (config) {
+						console.log('✅ Backend resolved:', candidate);
+						return candidate;
+					}
+				} catch (error) {
+					console.log(`❌ ${candidate} failed: ${error.message}`);
 				}
 			}
 
-			console.warn('⚠️ Falling back to default Render backend URL');
-			return backendCandidates[backendCandidates.length - 1];
+			console.warn('⚠️ Falling back to Render backend URL');
+			return 'https://learning-tutor-api.onrender.com';
 		}
 
 		async function loadRtcConfig() {
