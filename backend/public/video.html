@@ -810,6 +810,8 @@
 
 		let candidateTimeout = null;
 		let localCandidatesGathered = false;
+		let pendingOutgoingIceCandidates = [];
+		let pendingIncomingIceCandidates = [];
 
 		// ── Update status ──
 		function setStatus(text, state = 'pending') {
@@ -817,6 +819,41 @@
 			statusDot.classList.remove('connected', 'error');
 			if (state === 'connected') statusDot.classList.add('connected');
 			if (state === 'error') statusDot.classList.add('error');
+		}
+
+		function flushOutgoingIceCandidates() {
+			if (!socket || !remotePeerId || pendingOutgoingIceCandidates.length === 0) {
+				return;
+			}
+
+			const queuedCandidates = [...pendingOutgoingIceCandidates];
+			pendingOutgoingIceCandidates = [];
+
+			queuedCandidates.forEach((candidate) => {
+				socket.emit('ice-candidate', {
+					to: remotePeerId,
+					candidate,
+				});
+				console.log('✅ Queued candidate sent to peer');
+			});
+		}
+
+		async function flushIncomingIceCandidates() {
+			if (!peerConnection || !peerConnection.remoteDescription || pendingIncomingIceCandidates.length === 0) {
+				return;
+			}
+
+			const queuedCandidates = [...pendingIncomingIceCandidates];
+			pendingIncomingIceCandidates = [];
+
+			for (const candidate of queuedCandidates) {
+				try {
+					await peerConnection.addIceCandidate(candidate);
+					console.log('✅ Queued ICE candidate added');
+				} catch (error) {
+					console.warn('⚠️ Failed to add queued ICE candidate:', error.message);
+				}
+			}
 		}
 
 		async function fetchJsonWithTimeout(url, timeoutMs = 3000) {
@@ -912,6 +949,9 @@
 							candidate: event.candidate
 						});
 						console.log('✅ Candidate sent to peer');
+					} else {
+						pendingOutgoingIceCandidates.push(event.candidate);
+						console.log('⏳ Candidate queued until peer is ready');
 					}
 				} else {
 					console.log('✅ ICE gathering completed - all candidates sent');
@@ -1192,6 +1232,7 @@
 					remotePeerId = peer.id;
 					console.log('Found existing peer:', remotePeerId);
 					createPeerConnection();
+					flushOutgoingIceCandidates();
 					createOffer();
 				} else {
 					setStatus('Waiting for another participant...', 'pending');
@@ -1204,6 +1245,7 @@
 				if (!remotePeerId) {
 					remotePeerId = id;
 					createPeerConnection();
+					flushOutgoingIceCandidates();
 					setStatus('Peer joined, establishing connection...', 'pending');
 				}
 				addParticipant(name, 2, true);
@@ -1228,6 +1270,7 @@
 						console.log('📥 Setting remote description with answer...');
 						await peerConnection.setRemoteDescription(answerWithType);
 						console.log('✅ Answer set successfully');
+						await flushIncomingIceCandidates();
 					} catch (e) {
 						console.error('❌ Failed to set answer:', e);
 						console.error('Error details:', {
@@ -1244,6 +1287,12 @@
 
 			socket.on('ice-candidate', async ({ candidate }) => {
 				if (peerConnection && candidate) {
+						if (!peerConnection.remoteDescription) {
+							pendingIncomingIceCandidates.push(candidate);
+							console.log('⏳ ICE candidate queued until remote description is set');
+							return;
+						}
+
 					try {
 						console.log('❄️ Adding ICE candidate:', candidate);
 						await peerConnection.addIceCandidate(candidate);

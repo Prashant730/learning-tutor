@@ -86,9 +86,26 @@ app.get('/api/webrtc-config', (req, res) => {
     { urls: 'stun:stun1.l.google.com:19302' },
   ]
 
+  const fallbackTurnServers = [
+    {
+      urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: [
+        'turn:numb.viagenie.ca:3478?transport=udp',
+        'turn:numb.viagenie.ca:3478?transport=tcp',
+      ],
+      username: 'webrtcdemo@gmail.com',
+      credential: 'webrtcdemo',
+    },
+  ]
+
   const turnUrls = process.env.TURN_URLS
   const turnUsername = process.env.TURN_USERNAME
   const turnCredential = process.env.TURN_CREDENTIAL
+  let hasTurnServer = false
 
   if (turnUrls && turnUsername && turnCredential) {
     const urls = turnUrls
@@ -102,12 +119,17 @@ app.get('/api/webrtc-config', (req, res) => {
         username: turnUsername,
         credential: turnCredential,
       })
+      hasTurnServer = true
     }
+  }
+
+  if (!hasTurnServer) {
+    iceServers.push(...fallbackTurnServers)
   }
 
   res.json({
     iceServers,
-    hasTurn: iceServers.length > 2,
+    hasTurn: hasTurnServer || iceServers.length > 2,
   })
 })
 
