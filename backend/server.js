@@ -12,9 +12,24 @@ const app = express()
 const server = http.createServer(app)
 
 // ─── Socket.io setup ────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
-  .split(',')
-  .map((origin) => origin.trim())
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+]
+
+const allowedOrigins = Array.from(
+  new Set(
+    [process.env.CORS_ORIGIN || '', ...defaultOrigins]
+      .filter(Boolean)
+      .flatMap((value) => value.split(','))
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ),
+)
 
 const io = new Server(server, {
   cors: {
@@ -98,6 +113,10 @@ app.get('/api/webrtc-config', (req, res) => {
 
 // Serve frontend static files from public folder
 app.use(express.static(path.join(__dirname, 'public')))
+
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end()
+})
 
 // Fallback: serve index.html for any unmatched route
 app.get('*', (req, res) => {
