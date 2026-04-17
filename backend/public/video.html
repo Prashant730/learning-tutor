@@ -1113,15 +1113,14 @@
 			if (peerConnection) {
 				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
 				await flushIncomingIceCandidates(data.from);
-					}
-				}
-			});
+			}
+		});
 
-			socket.on('disconnect', () => {
-				console.log('Disconnected from signaling server');
-				setStatus('Disconnected', 'error');
-			});
-		}
+		socket.on('disconnect', () => {
+			console.log('Disconnected from signaling server');
+			setStatus('Disconnected', 'error');
+		});
+	}
 
 		function addParticipant(peerId, name, stream) {
 			const list = document.getElementById('participants-list');
