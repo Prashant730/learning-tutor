@@ -6,7 +6,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Call - AI Tutoring Tool</title>
   <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
   <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #111318;
+      --surface2: #181c24;
+      --border: rgba(255, 255, 255, 0.07);
+      --border2: rgba(255, 255, 255, 0.12);
+      --gold: #f5c842;
+      --gold-dim: #c9a430;
+      --teal: #2dd4bf;
+      --red: #f43f5e;
+      --green: #22c55e;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -14,89 +35,164 @@
     }
 
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      color: var(--text);
+      /* Subtle noise texture */
+      background-image:
+        radial-gradient(ellipse 80% 60% at 20% -10%, rgba(245, 200, 66, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 110%, rgba(45, 212, 191, 0.04) 0%, transparent 60%);
     }
 
+    /* ── HEADER ─────────────────────────────── */
     .header {
-      padding: 1.5rem 2rem;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 1rem 2rem;
+      background: rgba(10, 12, 16, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .logo {
-      font-size: 1.3rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
       font-weight: 800;
-      color: #667eea;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--gold);
     }
 
     .nav {
       display: flex;
-      gap: 2rem;
+      gap: 0.25rem;
     }
 
     .nav-link {
       text-decoration: none;
-      color: #666;
-      font-weight: 600;
-      transition: color 0.3s;
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      transition: all 0.2s;
+      letter-spacing: 0.01em;
     }
 
-    .nav-link:hover,
+    .nav-link:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
     .nav-link.active {
-      color: #667eea;
+      color: var(--gold);
+      background: rgba(245, 200, 66, 0.08);
     }
 
+    /* ── CONTAINER ───────────────────────────── */
     .container {
       flex: 1;
       padding: 2rem;
       display: flex;
       flex-direction: column;
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
       width: 100%;
     }
 
+    /* ── PAGE TITLE ──────────────────────────── */
     .page-title {
       text-align: center;
-      color: white;
-      margin-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease both;
     }
 
     .page-title h1 {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 0.6rem;
+    }
+
+    .page-title h1 span {
+      color: var(--gold);
     }
 
     .page-title p {
-      font-size: 1.1rem;
-      opacity: 0.9;
+      font-size: 1rem;
+      color: var(--muted);
+      font-weight: 400;
     }
 
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ── SETUP SCREEN ────────────────────────── */
     #setup-screen {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      max-width: 500px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem;
+      max-width: 480px;
       margin: 0 auto;
       width: 100%;
+      animation: fadeUp 0.5s ease 0.1s both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #setup-screen::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
     }
 
     .setup-title {
-      font-size: 1.8rem;
-      color: #333;
-      margin-bottom: 0.5rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.03em;
     }
 
     .setup-subtitle {
-      color: #999;
+      color: var(--muted);
+      font-size: 0.9rem;
       margin-bottom: 2rem;
     }
 
@@ -107,129 +203,220 @@
     .form-group label {
       display: block;
       margin-bottom: 0.5rem;
-      color: #333;
-      font-weight: 600;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     .form-input {
       width: 100%;
-      padding: 0.875rem;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 1rem;
-      transition: border-color 0.3s;
-      font-family: inherit;
+      padding: 0.85rem 1rem;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .form-input::placeholder {
+      color: var(--muted);
+      opacity: 0.6;
     }
 
     .form-input:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(245, 200, 66, 0.1);
     }
 
     .button-group {
       display: flex;
-      gap: 1rem;
+      gap: 0.75rem;
       margin-bottom: 1.5rem;
     }
 
     .btn {
       flex: 1;
-      padding: 0.875rem;
+      padding: 0.85rem;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
       font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
       cursor: pointer;
-      transition: all 0.3s;
-      font-family: inherit;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: var(--gold);
+      color: #0a0c10;
     }
 
     .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      background: #f7d460;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(245, 200, 66, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
     }
 
     .btn-secondary {
-      background: #f0f0f0;
-      color: #333;
-      border: 2px solid #ddd;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border2);
     }
 
     .btn-secondary:hover {
-      background: #e0e0e0;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
+    /* ── ROOM INFO BOX ───────────────────────── */
     .room-info {
-      background: #f5f5f5;
-      padding: 1rem;
-      border-radius: 8px;
+      background: rgba(245, 200, 66, 0.06);
+      border: 1px solid rgba(245, 200, 66, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
       text-align: center;
       margin-bottom: 1.5rem;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .room-info-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold-dim);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
     }
 
     .room-code-display {
-      font-size: 1.5rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
       font-weight: 800;
-      color: #667eea;
-      word-break: break-all;
+      color: var(--gold);
+      letter-spacing: 0.15em;
+      margin-bottom: 0.75rem;
     }
 
     .copy-btn {
-      margin-top: 0.5rem;
-      padding: 0.5rem 1rem;
-      font-size: 0.9rem;
+      padding: 0.45rem 1.1rem;
+      font-size: 0.82rem;
+      flex: none;
     }
 
+    .room-info-hint {
+      color: var(--teal);
+      font-size: 0.82rem;
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .room-info-hint::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--teal);
+      border-radius: 50%;
+      animation: blink 1.5s ease infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    /* ── JOIN FORM ───────────────────────────── */
+    #join-form {
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    /* ── CALL SCREEN ─────────────────────────── */
     #call-screen {
       display: none;
       flex: 1;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.875rem;
     }
 
     #call-screen.active {
       display: flex;
     }
 
+    /* ── CALL HEADER ─────────────────────────── */
     .call-header {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .call-room-info {
-      color: #333;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .call-room-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      font-weight: 600;
     }
 
     .call-room-code {
-      font-size: 1.3rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
       font-weight: 800;
-      color: #667eea;
+      color: var(--gold);
+      letter-spacing: 0.1em;
     }
 
     .call-status {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-weight: 600;
-      color: #10b981;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--green);
+      background: rgba(34, 197, 94, 0.08);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      padding: 0.4rem 0.9rem;
+      border-radius: 100px;
     }
 
     .status-indicator {
-      width: 0.75rem;
-      height: 0.75rem;
-      background: #10b981;
+      width: 7px;
+      height: 7px;
+      background: var(--green);
       border-radius: 50%;
-      animation: pulse 2s infinite;
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease infinite;
     }
 
     @keyframes pulse {
@@ -237,28 +424,31 @@
       0%,
       100% {
         opacity: 1;
+        transform: scale(1)
       }
 
       50% {
-        opacity: 0.5;
+        opacity: 0.6;
+        transform: scale(0.85)
       }
     }
 
+    /* ── VIDEO GRID ──────────────────────────── */
     .video-container {
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-      min-height: 300px;
+      gap: 0.875rem;
+      min-height: 340px;
     }
 
     .video-tile {
       position: relative;
-      background: #000;
-      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      min-height: 240px;
+      min-height: 260px;
     }
 
     .video-tile video {
@@ -270,17 +460,37 @@
       display: block;
     }
 
+    /* Subtle inner glow on active tile */
+    .video-tile::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+      z-index: 5;
+    }
+
     .video-label {
       position: absolute;
-      top: 1rem;
+      bottom: 1rem;
       left: 1rem;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
+      background: rgba(10, 12, 16, 0.75);
+      backdrop-filter: blur(8px);
+      color: var(--text);
+      padding: 0.3rem 0.75rem;
+      border-radius: 100px;
+      font-size: 0.78rem;
       font-weight: 600;
-      font-size: 0.9rem;
+      letter-spacing: 0.04em;
       z-index: 10;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Gold accent for local tile label */
+    .video-tile:first-child .video-label {
+      color: var(--gold);
+      border-color: rgba(245, 200, 66, 0.2);
     }
 
     .placeholder {
@@ -289,109 +499,236 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #667eea20, #764ba220);
-      color: white;
-      text-align: center;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
+      background: var(--surface2);
+      color: var(--muted);
+      text-align: center;
+      z-index: 3;
+    }
+
+    .placeholder-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .placeholder p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 400;
     }
 
     .placeholder.hidden {
       display: none;
     }
 
+    /* Waiting animation for remote tile */
+    #remote-placeholder .placeholder-icon {
+      animation: breathe 3s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.6;
+      }
+
+      50% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+    }
+
+    /* ── CONTROLS BAR ────────────────────────── */
     .controls {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius);
       display: flex;
       justify-content: center;
-      gap: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .control-btn {
-      width: 3.5rem;
-      height: 3.5rem;
+      width: 3.2rem;
+      height: 3.2rem;
       border-radius: 50%;
-      border: none;
-      background: #f0f0f0;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
       cursor: pointer;
-      font-size: 1.5rem;
-      transition: all 0.3s;
+      font-size: 1.1rem;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      color: var(--muted);
+      position: relative;
     }
 
     .control-btn:hover {
-      transform: scale(1.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+      transform: translateY(-2px);
     }
 
+    .control-btn:active {
+      transform: translateY(0) scale(0.95);
+    }
+
+    /* Active = green glow (mic/cam on) */
     .control-btn.active {
-      background: #10b981;
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.3);
+      color: var(--green);
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.15);
     }
 
+    /* End call = red */
     .control-btn.end-call {
-      background: #ef4444;
+      background: rgba(244, 63, 94, 0.12);
+      border-color: rgba(244, 63, 94, 0.3);
+      color: var(--red);
+      width: 3.6rem;
+      height: 3.6rem;
+      font-size: 1.2rem;
     }
 
     .control-btn.end-call:hover {
-      background: #dc2626;
+      background: rgba(244, 63, 94, 0.22);
+      border-color: var(--red);
+      box-shadow: 0 4px 20px rgba(244, 63, 94, 0.25);
     }
 
+    /* Keyboard shortcut badge */
+    .control-btn[title]::after {
+      content: attr(data-key);
+      position: absolute;
+      bottom: -1.6rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.65rem;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .control-btn:hover[title]::after {
+      opacity: 1;
+    }
+
+    /* ── PARTICIPANTS PANEL ───────────────────── */
     .participants-panel {
-      background: white;
-      padding: 1rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      max-height: 300px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      border-radius: var(--radius);
+      max-height: 160px;
       overflow-y: auto;
     }
 
+    .participants-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .participants-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .participants-panel::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 4px;
+    }
+
     .participants-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
       font-weight: 600;
-      color: #333;
-      margin-bottom: 1rem;
-      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
     }
 
     .participant-item {
-      padding: 0.75rem;
-      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      margin-bottom: 0.75rem;
-      font-size: 0.9rem;
-      color: #666;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text);
+      font-weight: 400;
     }
 
+    .participant-item::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--green);
+      flex-shrink: 0;
+    }
+
+    /* ── UTILITY ─────────────────────────────── */
     .hidden {
       display: none !important;
     }
 
+    /* ── RESPONSIVE ──────────────────────────── */
     @media (max-width: 768px) {
-      .video-container {
-        grid-template-columns: 1fr;
+      .container {
+        padding: 1rem;
       }
 
-      .control-btn {
-        width: 3rem;
-        height: 3rem;
-        font-size: 1.2rem;
+      .page-title h1 {
+        font-size: 2rem;
+      }
+
+      .video-container {
+        grid-template-columns: 1fr;
+        min-height: 480px;
+      }
+
+      .video-tile {
+        min-height: 220px;
       }
 
       .call-header {
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.75rem;
         text-align: center;
       }
 
       .nav {
-        gap: 1rem;
+        gap: 0;
       }
 
       .nav-link {
-        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+      }
+
+      #setup-screen {
+        padding: 1.5rem;
       }
     }
   </style>
@@ -399,7 +736,10 @@
 
 <body>
   <header class="header">
-    <div class="logo">🎓 AI Tutoring</div>
+    <div class="logo">
+      <span class="logo-dot"></span>
+      AI Tutoring
+    </div>
     <nav class="nav">
       <a href="index.html" class="nav-link">Home</a>
       <a href="dashboard.html" class="nav-link">Dashboard</a>
@@ -410,7 +750,7 @@
 
   <div class="container">
     <div class="page-title">
-      <h1>Video Call</h1>
+      <h1>Video <span>Call</span></h1>
       <p>Connect with your tutor for real-time learning sessions</p>
     </div>
 
@@ -430,16 +770,17 @@
       </div>
 
       <div id="room-info" class="room-info hidden">
-        <p style="color: #999; font-size: 0.9rem; margin-bottom: 0.5rem;">Room Code — share this with your peer</p>
+        <div class="room-info-label">Room Code — share with your peer</div>
         <div id="room-code" class="room-code-display">--</div>
         <button id="copy-code-btn" class="btn btn-secondary copy-btn">Copy Code</button>
-        <p style="color: #667eea; font-size: 0.85rem; margin-top: 0.75rem;">⏳ Waiting for peer to join…</p>
+        <div class="room-info-hint">Waiting for peer to join…</div>
       </div>
 
       <div class="form-group hidden" id="join-form">
         <label>Room Code</label>
         <input id="room-code-input" class="form-input" type="text" placeholder="Enter room code to join">
-        <button id="join-submit-btn" class="btn btn-primary" style="margin-top: 1rem;">Join</button>
+        <button id="join-submit-btn" class="btn btn-primary" style="margin-top: 1rem; width: 100%;">Join
+          Session</button>
       </div>
     </div>
 
@@ -447,12 +788,12 @@
     <div id="call-screen">
       <div class="call-header">
         <div class="call-room-info">
-          <p style="color: #999; font-size: 0.9rem;">Room</p>
+          <span class="call-room-label">Room</span>
           <div id="call-room-code" class="call-room-code">--</div>
         </div>
         <div class="call-status">
           <span class="status-indicator"></span>
-          <span>Connected</span>
+          <span>Live</span>
         </div>
       </div>
 
@@ -461,8 +802,8 @@
           <div class="video-label">You</div>
           <video id="local-video" autoplay muted playsinline></video>
           <div id="local-placeholder" class="placeholder">
-            <div>📷</div>
-            <div>Camera off</div>
+            <div class="placeholder-icon">📷</div>
+            <p>Camera off</p>
           </div>
         </div>
 
@@ -470,20 +811,20 @@
           <div class="video-label">Peer</div>
           <video id="remote-video" autoplay playsinline></video>
           <div id="remote-placeholder" class="placeholder">
-            <div>⏳</div>
-            <div>Waiting for peer</div>
+            <div class="placeholder-icon">⏳</div>
+            <p>Waiting for peer</p>
           </div>
         </div>
       </div>
 
       <div class="controls">
-        <button id="mic-btn" class="control-btn active" title="Toggle Mic (M)">🎤</button>
-        <button id="camera-btn" class="control-btn active" title="Toggle Camera (C)">📹</button>
-        <button id="end-btn" class="control-btn end-call" title="End Call (E)">📞</button>
+        <button id="mic-btn" class="control-btn active" title="Toggle Mic" data-key="M">🎤</button>
+        <button id="camera-btn" class="control-btn active" title="Toggle Camera" data-key="C">📹</button>
+        <button id="end-btn" class="control-btn end-call" title="End Call" data-key="E">📞</button>
       </div>
 
       <div class="participants-panel">
-        <div class="participants-title">Participants</div>
+        <div class="participants-title">In this session</div>
         <div id="participants-list"></div>
       </div>
     </div>
@@ -810,7 +1151,7 @@
       const item = document.createElement('div');
       item.className = 'participant-item';
       item.id = `participant-${id}`;
-      item.textContent = `👤 ${name}`;
+      item.textContent = name;
       els.participantsList.appendChild(item);
     }
 
