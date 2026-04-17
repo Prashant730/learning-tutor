@@ -782,39 +782,31 @@
 
 		// Debug logging
 		console.log('✅ Video call page loaded');
-		console.log('🔗 Backend URL: https://learning-tutor-api.onrender.com');
 		console.log('📡 Socket.io library status:', typeof io !== 'undefined' ? 'Loaded ✅' : 'Loading...');
 
-		const rtcConfig = {
+		const backendCandidates = [
+			'http://localhost:3001',
+			'http://127.0.0.1:3001',
+			'http://localhost:3000',
+			'http://127.0.0.1:3000',
+			'https://learning-tutor-api.onrender.com'
+		];
+
+		const baseRtcConfig = {
 			iceServers: [
-				// STUN servers for NAT traversal
 				{ urls: 'stun:stun.l.google.com:19302' },
 				{ urls: 'stun:stun1.l.google.com:19302' },
 				{ urls: 'stun:stun2.l.google.com:19302' },
 				{ urls: 'stun:stun3.l.google.com:19302' },
-				{ urls: 'stun:stun4.l.google.com:19302' },
-				// Primary TURN servers
-				{
-					urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
-					username: 'openrelayproject',
-					credential: 'openrelayproject'
-				},
-				// Backup TURN servers
-				{
-					urls: ['turn:numb.viagenie.ca:3478?transport=udp'],
-					username: 'webrtcdemo@gmail.com',
-					credential: 'webrtcdemo'
-				},
-				{
-					urls: ['turn:numb.viagenie.ca:3478?transport=tcp'],
-					username: 'webrtcdemo@gmail.com',
-					credential: 'webrtcdemo'
-				}
+				{ urls: 'stun:stun4.l.google.com:19302' }
 			],
-			iceCandidatePoolSize: 50,
+			iceCandidatePoolSize: 10,
 			bundlePolicy: 'max-bundle',
 			rtcpMuxPolicy: 'require'
 		};
+
+		let backendUrl = backendCandidates[backendCandidates.length - 1];
+		let rtcConfig = { ...baseRtcConfig };
 
 		let candidateTimeout = null;
 		let localCandidatesGathered = false;
@@ -825,6 +817,56 @@
 			statusDot.classList.remove('connected', 'error');
 			if (state === 'connected') statusDot.classList.add('connected');
 			if (state === 'error') statusDot.classList.add('error');
+		}
+
+		async function fetchJsonWithTimeout(url, timeoutMs = 3000) {
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+			try {
+				const response = await fetch(url, {
+					signal: controller.signal,
+					credentials: 'omit'
+				});
+				if (!response.ok) return null;
+				return await response.json();
+			} catch {
+				return null;
+			} finally {
+				clearTimeout(timeoutId);
+			}
+		}
+
+		async function resolveBackendUrl() {
+			for (const candidate of backendCandidates) {
+				const config = await fetchJsonWithTimeout(`${candidate}/api/webrtc-config`);
+				if (config) {
+					console.log('🔗 Backend resolved:', candidate);
+					return candidate;
+				}
+			}
+
+			console.warn('⚠️ Falling back to default Render backend URL');
+			return backendCandidates[backendCandidates.length - 1];
+		}
+
+		async function loadRtcConfig() {
+			const config = await fetchJsonWithTimeout(`${backendUrl}/api/webrtc-config`);
+			if (config?.iceServers?.length) {
+				const mergedIceServers = [
+					...baseRtcConfig.iceServers,
+					...config.iceServers.filter((server) => {
+						const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+						return urls.some((url) => typeof url === 'string' && url.startsWith('turn:'));
+					}),
+				];
+
+				return {
+					...baseRtcConfig,
+					iceServers: mergedIceServers,
+				};
+			}
+
+			return { ...baseRtcConfig };
 		}
 
 		// ── Create RTCPeerConnection ──
@@ -1110,7 +1152,10 @@
 
 		// ── Connect to backend via Socket.io ──
 		async function connectToServer() {
-			console.log('🔌 Starting Socket.io connection to: https://learning-tutor-api.onrender.com');
+			backendUrl = await resolveBackendUrl();
+			rtcConfig = await loadRtcConfig();
+			console.log('🔌 Starting Socket.io connection to:', backendUrl);
+			console.log('🛰️ RTC config:', rtcConfig);
 
 			// Wait for Socket.io library to load
 			await waitForSocketIO();
@@ -1123,7 +1168,7 @@
 			}
 
 			console.log('📡 Creating Socket.io connection...');
-			socket = io('https://learning-tutor-api.onrender.com', {
+			socket = io(backendUrl, {
 				reconnection: true,
 				reconnectionDelay: 1000,
 				reconnectionDelayMax: 5000,
