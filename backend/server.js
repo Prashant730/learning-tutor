@@ -165,63 +165,95 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`)
 
+  // Create a new video room
+  socket.on('create-room', ({ name }) => {
+    // Generate a simple room ID (you could use uuid for better uniqueness)
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase()
+
+    socket.join(roomId)
+    socket.roomCode = roomId
+    socket.userName = name || 'Anonymous'
+
+    if (!rooms.has(roomId)) rooms.set(roomId, new Map())
+    rooms.get(roomId).set(socket.id, socket.userName)
+
+    // Send room-created event back to the client
+    socket.emit('room-created', {
+      roomId: roomId,
+      name: socket.userName,
+    })
+
+    console.log(`${socket.userName} created room ${roomId}`)
+  })
+
   // Join a video room
-  socket.on('join-room', ({ roomCode, userName }) => {
-    if (!roomCode) return
+  socket.on('join-room', ({ roomId, name }) => {
+    if (!roomId) return
 
-    socket.join(roomCode)
-    socket.roomCode = roomCode
-    socket.userName = userName || 'Anonymous'
+    socket.join(roomId)
+    socket.roomCode = roomId
+    socket.userName = name || 'Anonymous'
 
-    if (!rooms.has(roomCode)) rooms.set(roomCode, new Map())
-    rooms.get(roomCode).set(socket.id, socket.userName)
+    if (!rooms.has(roomId)) rooms.set(roomId, new Map())
+    rooms.get(roomId).set(socket.id, socket.userName)
 
-    const peers = [...rooms.get(roomCode).entries()]
+    const peers = [...rooms.get(roomId).entries()]
       .filter(([id]) => id !== socket.id)
       .map(([id, name]) => ({ id, name }))
 
     // Tell the new peer about existing peers
-    socket.emit('room-peers', peers)
+    socket.emit('room-peers', { peers })
 
     // Tell existing peers about the new joiner
-    socket.to(roomCode).emit('peer-joined', {
+    socket.to(roomId).emit('peer-joined', {
       id: socket.id,
       name: socket.userName,
     })
 
     console.log(
-      `${socket.userName} joined room ${roomCode} (${rooms.get(roomCode).size} peers)`,
+      `${socket.userName} joined room ${roomId} (${rooms.get(roomId).size} peers)`,
     )
   })
 
   // WebRTC offer
-  socket.on('offer', ({ to, offer }) => {
-    console.log(`Offer from ${socket.id} to ${to}`)
-    io.to(to).emit('offer', { from: socket.id, name: socket.userName, offer })
-  })
-
-  // WebRTC answer
-  socket.on('answer', ({ to, answer }) => {
-    console.log(`Answer from ${socket.id} to ${to}`)
-    io.to(to).emit('answer', { from: socket.id, answer })
-  })
-
-  // ICE candidate exchange
-  socket.on('ice-candidate', ({ to, candidate }) => {
-    io.to(to).emit('ice-candidate', { from: socket.id, candidate })
-  })
-
-  // Peer media state changes (mute/camera off)
-  socket.on('media-state', ({ roomCode, video, audio }) => {
-    socket.to(roomCode).emit('peer-media-state', {
-      id: socket.id,
-      video,
-      audio,
+  socket.on('offer', ({ target, sdp, name }) => {
+    console.log(`Offer from ${socket.id} to ${target}`)
+    io.to(target).emit('offer', {
+      from: socket.id,
+      name: socket.userName || name,
+      sdp,
     })
   })
 
+  // WebRTC answer
+  socket.on('answer', ({ target, sdp, name }) => {
+    console.log(`Answer from ${socket.id} to ${target}`)
+    io.to(target).emit('answer', {
+      from: socket.id,
+      name: socket.userName || name,
+      sdp,
+    })
+  })
+
+  // ICE candidate exchange
+  socket.on('ice-candidate', ({ target, candidate }) => {
+    io.to(target).emit('ice-candidate', { from: socket.id, candidate })
+  })
+
+  // Peer media state changes (mute/camera off)
+  socket.on('media-state', ({ video, audio }) => {
+    if (socket.roomCode) {
+      socket.to(socket.roomCode).emit('peer-media-state', {
+        id: socket.id,
+        video,
+        audio,
+      })
+    }
+  })
+
   // Explicit leave (end call button)
-  socket.on('leave-room', ({ roomCode }) => {
+  socket.on('leave-room', () => {
+    const roomCode = socket.roomCode
     if (roomCode && rooms.has(roomCode)) {
       rooms.get(roomCode).delete(socket.id)
       if (rooms.get(roomCode).size === 0) rooms.delete(roomCode)
