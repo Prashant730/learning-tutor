@@ -12,16 +12,27 @@ const app = express()
 const server = http.createServer(app)
 
 // ─── Socket.io setup ────────────────────────────────────────────────────────
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 })
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }))
-app.use(cors())
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  }),
+)
 app.use(express.json())
 
 // Rate limiting
@@ -76,12 +87,12 @@ app.get('/api/webrtc-config', (req, res) => {
   })
 })
 
-// Serve frontend static files
-app.use(express.static(path.join(__dirname, '..')))
+// Serve frontend static files from public folder
+app.use(express.static(path.join(__dirname, 'public')))
 
 // Fallback: serve index.html for any unmatched route
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'))
+  res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
 // ─── WebRTC Signaling via Socket.io ─────────────────────────────────────────
