@@ -249,7 +249,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
-      min-height: 0;
+      min-height: 300px;
     }
 
     .video-tile {
@@ -258,12 +258,16 @@
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      min-height: 240px;
     }
 
     .video-tile video {
+      position: absolute;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
     }
 
     .video-label {
@@ -660,7 +664,11 @@
         delete state.iceCandidateQueues[data.id];
         state.participants.delete(data.id);
         document.getElementById(`participant-${data.id}`)?.remove();
-        els.remoteVideo.srcObject = null;
+        // Clear remote video — stop all tracks first to release resources
+        if (els.remoteVideo.srcObject) {
+          els.remoteVideo.srcObject.getTracks?.().forEach(t => t.stop());
+          els.remoteVideo.srcObject = null;
+        }
         els.remotePlaceholder.classList.remove('hidden');
       });
 
@@ -722,22 +730,54 @@
         }
       };
 
-      pc.onconnectionstatechange = () => log('info', `[${peerName}] connection: ${pc.connectionState}`);
-      pc.oniceconnectionstatechange = () => log('info', `[${peerName}] ICE: ${pc.iceConnectionState}`);
+      // FIX: On connection established, force-play the remote video in case
+      // autoplay was blocked or the stream was set before connection was ready
+      pc.onconnectionstatechange = () => {
+        log('info', `[${peerName}] connection: ${pc.connectionState}`);
+        if (pc.connectionState === 'connected') {
+          if (els.remoteVideo.srcObject) {
+            els.remoteVideo.play().catch(() => { });
+            els.remotePlaceholder.classList.add('hidden');
+            log('success', `[${peerName}] Connection established — remote video playing`);
+          }
+        }
+        if (pc.connectionState === 'failed') {
+          log('error', `[${peerName}] Connection failed — attempting ICE restart`);
+          pc.restartIce();
+        }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        log('info', `[${peerName}] ICE: ${pc.iceConnectionState}`);
+        // FIX: On ICE connected/completed, ensure video is playing
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          if (els.remoteVideo.srcObject) {
+            els.remoteVideo.play().catch(() => { });
+            els.remotePlaceholder.classList.add('hidden');
+          }
+        }
+      };
+
+      // FIX: Robust ontrack — always build a stable MediaStream, set srcObject once,
+      // and ensure video plays when both audio+video tracks have arrived
+      const remoteStream = new MediaStream();
+      els.remoteVideo.srcObject = remoteStream;
 
       pc.ontrack = (event) => {
         log('success', `Track received from ${peerName}: ${event.track.kind}`);
+
+        // Prefer adding from the event stream directly for stream continuity
         if (event.streams?.[0]) {
+          // Replace srcObject with the full stream from the event
           els.remoteVideo.srcObject = event.streams[0];
         } else {
-          // FIX: Build stream manually if track arrives without a stream
-          let stream = els.remoteVideo.srcObject instanceof MediaStream
-            ? els.remoteVideo.srcObject
-            : new MediaStream();
-          stream.addTrack(event.track);
-          els.remoteVideo.srcObject = stream;
+          // Fallback: manually add track to our pre-built stream
+          remoteStream.addTrack(event.track);
+          els.remoteVideo.srcObject = remoteStream;
         }
-        els.remoteVideo.play().catch(() => { });
+
+        // Always attempt play; browser may suppress autoplay until user gesture
+        els.remoteVideo.play().catch(e => log('warn', `play() suppressed: ${e.message}`));
         els.remotePlaceholder.classList.add('hidden');
       };
 

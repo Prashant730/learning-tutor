@@ -1,928 +1,906 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Video Call - AI Tutoring Tool</title>
-	<link rel="icon" href="data:,">
-	<style>
-		* {
-			margin: 0;
-			padding: 0;
-			box-sizing: border-box;
-		}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Call - AI Tutoring Tool</title>
+  <link rel="icon" href="data:,">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-		body {
-			font-family: system-ui, -apple-system, sans-serif;
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			min-height: 100vh;
-			display: flex;
-			flex-direction: column;
-		}
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-		.header {
-			padding: 1.5rem 2rem;
-			background: rgba(255, 255, 255, 0.95);
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-		}
+    .header {
+      padding: 1.5rem 2rem;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-		.logo {
-			font-size: 1.3rem;
-			font-weight: 800;
-			color: #667eea;
-		}
+    .logo {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #667eea;
+    }
 
-		.nav {
-			display: flex;
-			gap: 2rem;
-		}
+    .nav {
+      display: flex;
+      gap: 2rem;
+    }
 
-		.nav-link {
-			text-decoration: none;
-			color: #666;
-			font-weight: 600;
-			transition: color 0.3s;
-		}
+    .nav-link {
+      text-decoration: none;
+      color: #666;
+      font-weight: 600;
+      transition: color 0.3s;
+    }
 
-		.nav-link:hover,
-		.nav-link.active {
-			color: #667eea;
-		}
+    .nav-link:hover,
+    .nav-link.active {
+      color: #667eea;
+    }
 
-		.container {
-			flex: 1;
-			padding: 2rem;
-			display: flex;
-			flex-direction: column;
-			max-width: 1200px;
-			margin: 0 auto;
-			width: 100%;
-		}
+    .container {
+      flex: 1;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
 
-		.page-title {
-			text-align: center;
-			color: white;
-			margin-bottom: 2rem;
-		}
+    .page-title {
+      text-align: center;
+      color: white;
+      margin-bottom: 2rem;
+    }
 
-		.page-title h1 {
-			font-size: 2.5rem;
-			margin-bottom: 0.5rem;
-		}
+    .page-title h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
 
-		.page-title p {
-			font-size: 1.1rem;
-			opacity: 0.9;
-		}
+    .page-title p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
 
-		/* Setup Screen */
-		#setup-screen {
-			background: white;
-			border-radius: 12px;
-			padding: 2rem;
-			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-			max-width: 500px;
-			margin: 0 auto;
-			width: 100%;
-		}
+    #setup-screen {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
 
-		.setup-title {
-			font-size: 1.8rem;
-			color: #333;
-			margin-bottom: 0.5rem;
-		}
+    .setup-title {
+      font-size: 1.8rem;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
 
-		.setup-subtitle {
-			color: #999;
-			margin-bottom: 2rem;
-		}
+    .setup-subtitle {
+      color: #999;
+      margin-bottom: 2rem;
+    }
 
-		.form-group {
-			margin-bottom: 1.5rem;
-		}
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
 
-		.form-group label {
-			display: block;
-			margin-bottom: 0.5rem;
-			color: #333;
-			font-weight: 600;
-		}
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #333;
+      font-weight: 600;
+    }
 
-		.form-input {
-			width: 100%;
-			padding: 0.875rem;
-			border: 2px solid #ddd;
-			border-radius: 8px;
-			font-size: 1rem;
-			transition: border-color 0.3s;
-			font-family: inherit;
-		}
+    .form-input {
+      width: 100%;
+      padding: 0.875rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+      font-family: inherit;
+    }
 
-		.form-input:focus {
-			outline: none;
-			border-color: #667eea;
-		}
+    .form-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
 
-		.button-group {
-			display: flex;
-			gap: 1rem;
-			margin-bottom: 1.5rem;
-		}
+    .button-group {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
 
-		.btn {
-			flex: 1;
-			padding: 0.875rem;
-			border: none;
-			border-radius: 8px;
-			font-size: 1rem;
-			font-weight: 600;
-			cursor: pointer;
-			transition: all 0.3s;
-			font-family: inherit;
-		}
+    .btn {
+      flex: 1;
+      padding: 0.875rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
 
-		.btn-primary {
-			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-			color: white;
-		}
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
 
-		.btn-primary:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-		}
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
 
-		.btn-secondary {
-			background: #f0f0f0;
-			color: #333;
-			border: 2px solid #ddd;
-		}
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+      border: 2px solid #ddd;
+    }
 
-		.btn-secondary:hover {
-			background: #e0e0e0;
-		}
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
 
-		.room-info {
-			background: #f5f5f5;
-			padding: 1rem;
-			border-radius: 8px;
-			text-align: center;
-			margin-bottom: 1.5rem;
-		}
+    .room-info {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
 
-		.room-code-display {
-			font-size: 1.5rem;
-			font-weight: 800;
-			color: #667eea;
-			word-break: break-all;
-		}
+    .room-code-display {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #667eea;
+      word-break: break-all;
+    }
 
-		.copy-btn {
-			margin-top: 0.5rem;
-			padding: 0.5rem 1rem;
-			font-size: 0.9rem;
-		}
+    .copy-btn {
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
 
-		/* Call Screen */
-		#call-screen {
-			display: none;
-			flex: 1;
-			flex-direction: column;
-			gap: 1rem;
-		}
+    #call-screen {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 1rem;
+    }
 
-		#call-screen.active {
-			display: flex;
-		}
+    #call-screen.active {
+      display: flex;
+    }
 
-		.call-header {
-			background: white;
-			padding: 1.5rem;
-			border-radius: 12px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-		}
+    .call-header {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
 
-		.call-room-info {
-			color: #333;
-		}
+    .call-room-info {
+      color: #333;
+    }
 
-		.call-room-code {
-			font-size: 1.3rem;
-			font-weight: 800;
-			color: #667eea;
-		}
+    .call-room-code {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #667eea;
+    }
 
-		.call-status {
-			display: flex;
-			align-items: center;
-			gap: 0.5rem;
-			font-weight: 600;
-			color: #10b981;
-		}
+    .call-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: #10b981;
+    }
 
-		.status-indicator {
-			width: 0.75rem;
-			height: 0.75rem;
-			background: #10b981;
-			border-radius: 50%;
-			animation: pulse 2s infinite;
-		}
+    .status-indicator {
+      width: 0.75rem;
+      height: 0.75rem;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
 
-		@keyframes pulse {
-			0%, 100% { opacity: 1; }
-			50% { opacity: 0.5; }
-		}
+    @keyframes pulse {
 
-		.video-container {
-			flex: 1;
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			gap: 1rem;
-			min-height: 0;
-		}
+      0%,
+      100% {
+        opacity: 1;
+      }
 
-		.video-tile {
-			position: relative;
-			background: #000;
-			border-radius: 12px;
-			overflow: hidden;
-			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-		}
+      50% {
+        opacity: 0.5;
+      }
+    }
 
-		.video-tile video {
-			width: 100%;
-			height: 100%;
-			object-fit: cover;
-		}
+    .video-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      min-height: 300px;
+    }
 
-		.video-label {
-			position: absolute;
-			top: 1rem;
-			left: 1rem;
-			background: rgba(0, 0, 0, 0.6);
-			color: white;
-			padding: 0.5rem 1rem;
-			border-radius: 20px;
-			font-weight: 600;
-			font-size: 0.9rem;
-			z-index: 10;
-		}
+    .video-tile {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      min-height: 240px;
+    }
 
-		.placeholder {
-			position: absolute;
-			inset: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: linear-gradient(135deg, #667eea20, #764ba220);
-			color: white;
-			text-align: center;
-			flex-direction: column;
-			gap: 1rem;
-		}
+    .video-tile video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
 
-		.placeholder.hidden {
-			display: none;
-		}
+    .video-label {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      z-index: 10;
+    }
 
-		.controls {
-			background: white;
-			padding: 1.5rem;
-			border-radius: 12px;
-			display: flex;
-			justify-content: center;
-			gap: 1.5rem;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-		}
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea20, #764ba220);
+      color: white;
+      text-align: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
 
-		.control-btn {
-			width: 3.5rem;
-			height: 3.5rem;
-			border-radius: 50%;
-			border: none;
-			background: #f0f0f0;
-			cursor: pointer;
-			font-size: 1.5rem;
-			transition: all 0.3s;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-		}
+    .placeholder.hidden {
+      display: none;
+    }
 
-		.control-btn:hover {
-			transform: scale(1.1);
-		}
+    .controls {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
 
-		.control-btn.active {
-			background: #10b981;
-		}
+    .control-btn {
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: 50%;
+      border: none;
+      background: #f0f0f0;
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-		.control-btn.end-call {
-			background: #ef4444;
-		}
+    .control-btn:hover {
+      transform: scale(1.1);
+    }
 
-		.control-btn.end-call:hover {
-			background: #dc2626;
-		}
+    .control-btn.active {
+      background: #10b981;
+    }
 
-		.participants-panel {
-			background: white;
-			padding: 1rem;
-			border-radius: 12px;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-			max-height: 300px;
-			overflow-y: auto;
-		}
+    .control-btn.end-call {
+      background: #ef4444;
+    }
 
-		.participants-title {
-			font-weight: 600;
-			color: #333;
-			margin-bottom: 1rem;
-			font-size: 0.95rem;
-		}
+    .control-btn.end-call:hover {
+      background: #dc2626;
+    }
 
-		.participant-item {
-			padding: 0.75rem;
-			background: #f5f5f5;
-			border-radius: 8px;
-			margin-bottom: 0.75rem;
-			font-size: 0.9rem;
-			color: #666;
-		}
+    .participants-panel {
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      max-height: 300px;
+      overflow-y: auto;
+    }
 
-		.hidden {
-			display: none !important;
-		}
+    .participants-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
 
-		@media (max-width: 768px) {
-			.video-container {
-				grid-template-columns: 1fr;
-			}
+    .participant-item {
+      padding: 0.75rem;
+      background: #f5f5f5;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
 
-			.control-btn {
-				width: 3rem;
-				height: 3rem;
-				font-size: 1.2rem;
-			}
+    .hidden {
+      display: none !important;
+    }
 
-			.call-header {
-				flex-direction: column;
-				gap: 1rem;
-				text-align: center;
-			}
+    @media (max-width: 768px) {
+      .video-container {
+        grid-template-columns: 1fr;
+      }
 
-			.nav {
-				gap: 1rem;
-			}
+      .control-btn {
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.2rem;
+      }
 
-			.nav-link {
-				font-size: 0.9rem;
-			}
-		}
-	</style>
+      .call-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+
+      .nav {
+        gap: 1rem;
+      }
+
+      .nav-link {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
 </head>
+
 <body>
-	<header class="header">
-		<div class="logo">🎓 AI Tutoring</div>
-		<nav class="nav">
-			<a href="index.html" class="nav-link">Home</a>
-			<a href="dashboard.html" class="nav-link">Dashboard</a>
-			<a href="chat.html" class="nav-link">Chat</a>
-			<a href="video.html" class="nav-link active">Video</a>
-		</nav>
-	</header>
+  <header class="header">
+    <div class="logo">🎓 AI Tutoring</div>
+    <nav class="nav">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="chat.html" class="nav-link">Chat</a>
+      <a href="video.html" class="nav-link active">Video</a>
+    </nav>
+  </header>
 
-	<div class="container">
-		<div class="page-title">
-			<h1>Video Call</h1>
-			<p>Connect with your tutor for real-time learning sessions</p>
-		</div>
+  <div class="container">
+    <div class="page-title">
+      <h1>Video Call</h1>
+      <p>Connect with your tutor for real-time learning sessions</p>
+    </div>
 
-		<!-- Setup Screen -->
-		<div id="setup-screen">
-			<h2 class="setup-title">Start a Session</h2>
-			<p class="setup-subtitle">Create a new room or join an existing one</p>
+    <!-- Setup Screen -->
+    <div id="setup-screen">
+      <h2 class="setup-title">Start a Session</h2>
+      <p class="setup-subtitle">Create a new room or join an existing one</p>
 
-			<div class="form-group">
-				<label>Your Name</label>
-				<input id="name-input" class="form-input" type="text" placeholder="Enter your name" value="Student">
-			</div>
+      <div class="form-group">
+        <label>Your Name</label>
+        <input id="name-input" class="form-input" type="text" placeholder="Enter your name" value="Student">
+      </div>
 
-			<div class="button-group">
-				<button id="create-btn" class="btn btn-primary">Create Room</button>
-				<button id="join-btn" class="btn btn-secondary">Join Room</button>
-			</div>
+      <div class="button-group">
+        <button id="create-btn" class="btn btn-primary">Create Room</button>
+        <button id="join-btn" class="btn btn-secondary">Join Room</button>
+      </div>
 
-			<div id="room-info" class="room-info hidden">
-				<p style="color: #999; font-size: 0.9rem; margin-bottom: 0.5rem;">Room Code</p>
-				<div id="room-code" class="room-code-display">--</div>
-				<button id="copy-code-btn" class="btn btn-secondary copy-btn">Copy Code</button>
-			</div>
+      <div id="room-info" class="room-info hidden">
+        <p style="color: #999; font-size: 0.9rem; margin-bottom: 0.5rem;">Room Code — share this with your peer</p>
+        <div id="room-code" class="room-code-display">--</div>
+        <button id="copy-code-btn" class="btn btn-secondary copy-btn">Copy Code</button>
+        <p style="color: #667eea; font-size: 0.85rem; margin-top: 0.75rem;">⏳ Waiting for peer to join…</p>
+      </div>
 
-			<div class="form-group hidden" id="join-form">
-				<label>Room Code</label>
-				<input id="room-code-input" class="form-input" type="text" placeholder="Enter room code to join">
-				<button id="join-submit-btn" class="btn btn-primary" style="margin-top: 1rem;">Join</button>
-			</div>
-		</div>
+      <div class="form-group hidden" id="join-form">
+        <label>Room Code</label>
+        <input id="room-code-input" class="form-input" type="text" placeholder="Enter room code to join">
+        <button id="join-submit-btn" class="btn btn-primary" style="margin-top: 1rem;">Join</button>
+      </div>
+    </div>
 
-		<!-- Call Screen -->
-		<div id="call-screen">
-			<div class="call-header">
-				<div class="call-room-info">
-					<p style="color: #999; font-size: 0.9rem;">Room</p>
-					<div id="call-room-code" class="call-room-code">--</div>
-				</div>
-				<div class="call-status">
-					<span class="status-indicator"></span>
-					<span>Connected</span>
-				</div>
-			</div>
+    <!-- Call Screen -->
+    <div id="call-screen">
+      <div class="call-header">
+        <div class="call-room-info">
+          <p style="color: #999; font-size: 0.9rem;">Room</p>
+          <div id="call-room-code" class="call-room-code">--</div>
+        </div>
+        <div class="call-status">
+          <span class="status-indicator"></span>
+          <span>Connected</span>
+        </div>
+      </div>
 
-			<div class="video-container">
-				<div class="video-tile">
-					<div class="video-label">You</div>
-					<video id="local-video" autoplay muted playsinline></video>
-					<div id="local-placeholder" class="placeholder">
-						<div>📷</div>
-						<div>Camera off</div>
-					</div>
-				</div>
+      <div class="video-container">
+        <div class="video-tile">
+          <div class="video-label">You</div>
+          <video id="local-video" autoplay muted playsinline></video>
+          <div id="local-placeholder" class="placeholder">
+            <div>📷</div>
+            <div>Camera off</div>
+          </div>
+        </div>
 
-				<div class="video-tile">
-					<div class="video-label">Peer</div>
-					<video id="remote-video" autoplay playsinline></video>
-					<div id="remote-placeholder" class="placeholder">
-						<div>⏳</div>
-						<div>Waiting for peer</div>
-					</div>
-				</div>
-			</div>
+        <div class="video-tile">
+          <div class="video-label">Peer</div>
+          <video id="remote-video" autoplay playsinline></video>
+          <div id="remote-placeholder" class="placeholder">
+            <div>⏳</div>
+            <div>Waiting for peer</div>
+          </div>
+        </div>
+      </div>
 
-			<div class="controls">
-				<button id="mic-btn" class="control-btn active" title="Toggle Mic (M)">🎤</button>
-				<button id="camera-btn" class="control-btn active" title="Toggle Camera (C)">📹</button>
-				<button id="end-btn" class="control-btn end-call" title="End Call (E)">📞</button>
-			</div>
+      <div class="controls">
+        <button id="mic-btn" class="control-btn active" title="Toggle Mic (M)">🎤</button>
+        <button id="camera-btn" class="control-btn active" title="Toggle Camera (C)">📹</button>
+        <button id="end-btn" class="control-btn end-call" title="End Call (E)">📞</button>
+      </div>
 
-			<div class="participants-panel">
-				<div class="participants-title">Participants</div>
-				<div id="participants-list"></div>
-			</div>
-		</div>
-	</div>
+      <div class="participants-panel">
+        <div class="participants-title">Participants</div>
+        <div id="participants-list"></div>
+      </div>
+    </div>
+  </div>
 
-	<script src="https://learning-tutor-api.onrender.com/socket.io/socket.io.js"></script>
-	<script>
-		// ===== STATE =====
-		const state = {
-			socket: null,
-			localStream: null,
-			peerConnections: {},
-			roomCode: null,
-			displayName: null,
-			micEnabled: true,
-			cameraEnabled: true,
-			participants: new Map(),
-			backendUrl: null
-		};
+  <script src="https://learning-tutor-api.onrender.com/socket.io/socket.io.js"></script>
+  <script>
+    // ===== STATE =====
+    const state = {
+      socket: null,
+      localStream: null,
+      peerConnections: {},
+      iceCandidateQueues: {}, // FIX: queue ICE candidates until remote desc is set
+      roomCode: null,
+      displayName: null,
+      micEnabled: true,
+      cameraEnabled: true,
+      participants: new Map(),
+      backendUrl: null
+    };
 
-		// ===== DOM ELEMENTS =====
-		const els = {
-			setupScreen: document.getElementById('setup-screen'),
-			callScreen: document.getElementById('call-screen'),
-			nameInput: document.getElementById('name-input'),
-			createBtn: document.getElementById('create-btn'),
-			joinBtn: document.getElementById('join-btn'),
-			joinForm: document.getElementById('join-form'),
-			roomCodeInput: document.getElementById('room-code-input'),
-			joinSubmitBtn: document.getElementById('join-submit-btn'),
-			roomInfo: document.getElementById('room-info'),
-			roomCode: document.getElementById('room-code'),
-			copyCodeBtn: document.getElementById('copy-code-btn'),
-			callRoomCode: document.getElementById('call-room-code'),
-			localVideo: document.getElementById('local-video'),
-			remoteVideo: document.getElementById('remote-video'),
-			localPlaceholder: document.getElementById('local-placeholder'),
-			remotePlaceholder: document.getElementById('remote-placeholder'),
-			micBtn: document.getElementById('mic-btn'),
-			cameraBtn: document.getElementById('camera-btn'),
-			endBtn: document.getElementById('end-btn'),
-			participantsList: document.getElementById('participants-list')
-		};
+    // ===== DOM =====
+    const els = {
+      setupScreen: document.getElementById('setup-screen'),
+      callScreen: document.getElementById('call-screen'),
+      nameInput: document.getElementById('name-input'),
+      createBtn: document.getElementById('create-btn'),
+      joinBtn: document.getElementById('join-btn'),
+      joinForm: document.getElementById('join-form'),
+      roomCodeInput: document.getElementById('room-code-input'),
+      joinSubmitBtn: document.getElementById('join-submit-btn'),
+      roomInfo: document.getElementById('room-info'),
+      roomCode: document.getElementById('room-code'),
+      copyCodeBtn: document.getElementById('copy-code-btn'),
+      callRoomCode: document.getElementById('call-room-code'),
+      localVideo: document.getElementById('local-video'),
+      remoteVideo: document.getElementById('remote-video'),
+      localPlaceholder: document.getElementById('local-placeholder'),
+      remotePlaceholder: document.getElementById('remote-placeholder'),
+      micBtn: document.getElementById('mic-btn'),
+      cameraBtn: document.getElementById('camera-btn'),
+      endBtn: document.getElementById('end-btn'),
+      participantsList: document.getElementById('participants-list')
+    };
 
-		// ===== UTILITIES =====
-		function log(type, msg) {
-			const icons = { info: 'ℹ', success: '✓', error: '✗', warn: '⚠' };
-			console.log(`[${icons[type] || '•'}] ${msg}`);
-		}
+    function log(type, msg) {
+      const icons = { info: 'ℹ', success: '✓', error: '✗', warn: '⚠' };
+      console.log(`[${icons[type] || '•'}] ${msg}`);
+    }
 
-		async function resolveBackend() {
-			const candidates = [
-				'http://localhost:3001',
-				'http://localhost:3000',
-				'https://learning-tutor-api.onrender.com'
-			];
+    // ===== BACKEND RESOLUTION =====
+    async function resolveBackend() {
+      const candidates = [
+        'http://localhost:3001',
+        'http://localhost:3000',
+        'https://learning-tutor-api.onrender.com'
+      ];
+      for (const url of candidates) {
+        try {
+          const res = await fetch(`${url}/api/webrtc-config`, { signal: AbortSignal.timeout(3000) });
+          if (res.ok) { log('success', `Connected to backend: ${url}`); return url; }
+        } catch { log('warn', `${url} failed`); }
+      }
+      return candidates[candidates.length - 1];
+    }
 
-			for (const url of candidates) {
-				try {
-					const res = await fetch(`${url}/api/webrtc-config`, { signal: AbortSignal.timeout(3000) });
-					if (res.ok) {
-						log('success', `Connected to backend: ${url}`);
-						return url;
-					}
-				} catch (e) {
-					log('warn', `${url} failed`);
-				}
-			}
+    // ===== SOCKET INIT =====
+    async function initSocket() {
+      state.backendUrl = await resolveBackend();
+      state.socket = io(state.backendUrl, { transports: ['websocket', 'polling'] });
 
-			return candidates[candidates.length - 1];
-		}
+      state.socket.on('connect', () => log('success', 'Connected to signaling server'));
 
-		async function initSocket() {
-			state.backendUrl = await resolveBackend();
-			state.socket = io(state.backendUrl, { transports: ['websocket', 'polling'] });
+      // FIX: Don't jump to call screen on room-created — stay on setup so the creator
+      // can share the code. Call screen is shown when peer-joined fires.
+      state.socket.on('room-created', (data) => {
+        log('success', `Room created: ${data.roomId}`);
+        state.roomCode = data.roomId;
+        els.roomCode.textContent = data.roomId;
+        els.roomInfo.classList.remove('hidden');
+      });
 
-			state.socket.on('connect', () => {
-				log('success', 'Connected to signaling server');
-			});
+      state.socket.on('room-joined', (data) => {
+        log('success', 'Joined room');
+        state.roomCode = data.roomId;
+        showCallScreen();
+      });
 
-			state.socket.on('room-created', (data) => {
-				log('success', `Room created: ${data.roomId}`);
-				state.roomCode = data.roomId;
-				els.roomCode.textContent = data.roomId;
-				els.roomInfo.classList.remove('hidden');
-				log('info', `Showing call screen for created room ${data.roomId}`);
-				showCallScreen();
-			});
+      // FIX: Joiner sends offers to all existing peers (room-peers event)
+      state.socket.on('room-peers', async (data) => {
+        log('info', `Room peers: ${data.peers.length}`);
+        for (const peer of data.peers) {
+          if (peer.id !== state.socket.id) {
+            addParticipant(peer.id, peer.name);
+            await sendOffer(peer.id, peer.name);
+          }
+        }
+      });
 
-			state.socket.on('room-joined', (data) => {
-				log('success', 'Joined room');
-				state.roomCode = data.roomId;
-				showCallScreen();
-			});
+      // FIX: Room creator sends offer when a new peer joins
+      state.socket.on('peer-joined', async (data) => {
+        log('info', `Peer joined: ${data.name} (${data.id})`);
+        addParticipant(data.id, data.name);
+        // Show call screen for room creator when first peer arrives
+        if (!els.callScreen.classList.contains('active')) showCallScreen();
+        if (!state.peerConnections[data.id]) await sendOffer(data.id, data.name);
+      });
 
-			state.socket.on('room-peers', async (data) => {
-				log('info', `Room peers received: ${data.peers.length} peer(s)`);
-			if (!data.peers || data.peers.length === 0) {
-				log('warn', 'No peers in room yet - waiting for others to join');
-				return;
-			}
-			log('info', `Processing ${data.peers.length} peer(s) in room`);
-			for (const peer of data.peers) {
-				log('info', `Checking peer: ${peer.id} vs my socket: ${state.socket.id}`);
-				if (peer.id !== state.socket.id) {
-					log('info', `Processing peer: ${peer.name} (${peer.id})`);
-						try {
-							log('info', `Creating offer for ${peer.name}...`);
-							const offer = await pc.createOffer();
-							log('info', `Setting local description...`);
-							await pc.setLocalDescription(offer);
-							log('info', `Sending offer to ${peer.name}...`);
-							state.socket.emit('offer', {
-								target: peer.id,
-								sdp: pc.localDescription,
-								name: state.displayName
-							});
-							log('success', `Offer sent to ${peer.name}`);
-						} catch (e) {
-							log('error', `Failed to create offer: ${e.message}`);
-							console.error('Offer creation error:', e);
-						}
-					}
-				}
-			});
+      // FIX: Handle "signaling glare" — both sides try to send offers simultaneously
+      state.socket.on('offer', async (data) => {
+        log('info', `Offer received from ${data.name}`);
+        if (!state.peerConnections[data.from]) createPeerConnection(data.from, data.name);
+        const pc = state.peerConnections[data.from];
+        if (!pc) return;
 
-			state.socket.on('peer-joined', async (data) => {
-				log('info', `Peer joined: ${data.name} (${data.id})`);
-				addParticipant(data.id, data.name);
+        // Glare resolution: higher socket ID wins (keeps its offer, lower backs off)
+        if (pc.signalingState === 'have-local-offer') {
+          if (state.socket.id > data.from) {
+            log('warn', 'Glare: we win, ignoring incoming offer');
+            return;
+          }
+          log('warn', 'Glare: rolling back our offer');
+          await pc.setLocalDescription({ type: 'rollback' });
+        }
 
-				// Create peer connection and send offer
-				if (!state.peerConnections[data.id]) {
-					const pc = createPeerConnection(data.id, data.name);
-					try {
-						log('info', `Creating offer for new peer ${data.name}...`);
-						const offer = await pc.createOffer();
-						log('info', `Setting local description for new peer...`);
-						await pc.setLocalDescription(offer);
-						log('info', `Sending offer to new peer ${data.name}...`);
-						state.socket.emit('offer', {
-							target: data.id,
-							sdp: pc.localDescription,
-							name: state.displayName
-						});
-						log('success', `Offer sent to new peer ${data.name}`);
-					} catch (e) {
-						log('error', `Failed to create offer for new peer: ${e.message}`);
-						console.error('New peer offer error:', e);
-					}
-				}
-			});
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          await flushIceCandidates(data.from); // FIX: apply queued candidates
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          state.socket.emit('answer', { target: data.from, sdp: pc.localDescription });
+          log('success', `Answer sent to ${data.name}`);
+        } catch (e) {
+          log('error', `Offer handling failed: ${e.message}`);
+        }
+      });
 
-			state.socket.on('offer', async (data) => {
-			log('info', `Offer received from ${data.name} (${data.from})`);
-			if (!state.peerConnections[data.from]) {
-				log('info', `Creating new peer connection for ${data.name}`);
-				createPeerConnection(data.from, data.name);
-			}
-			const pc = state.peerConnections[data.from];
-			if (!pc) {
-				log('error', `Peer connection not found for ${data.from}`);
-				return;
-			}
-			try {
-				log('info', `Setting remote description from offer...`);
-				const remoteDesc = new RTCSessionDescription(data.sdp);
-				log('info', `Remote description object: type=${remoteDesc.type}`);
-				await pc.setRemoteDescription(remoteDesc);
-				log('info', `Remote description set, creating answer...`);
-				const answer = await pc.createAnswer();
-				log('info', `Answer created, setting local description...`);
-				await pc.setLocalDescription(answer);
-				log('info', `Local description set, sending answer...`);
-				state.socket.emit('answer', {
-					target: data.from,
-					sdp: pc.localDescription
-				});
-				log('success', `Answer sent to ${data.name}`);
-			} catch (e) {
-				log('error', `Failed to handle offer: ${e.message}`);
-				console.error('Offer error:', e);
-			}
-		});
+      state.socket.on('answer', async (data) => {
+        log('info', `Answer received from ${data.from}`);
+        const pc = state.peerConnections[data.from];
+        if (!pc || pc.signalingState !== 'have-local-offer') {
+          log('warn', `Ignoring answer — state: ${pc?.signalingState}`);
+          return;
+        }
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+          await flushIceCandidates(data.from); // FIX: apply queued candidates
+          log('success', 'Answer applied');
+        } catch (e) {
+          log('error', `Answer failed: ${e.message}`);
+        }
+      });
 
-		state.socket.on('answer', async (data) => {
-			log('info', `Answer received from peer (${data.from})`);
-			const pc = state.peerConnections[data.from];
-			if (!pc) {
-				log('error', `Peer connection not found for ${data.from} when handling answer`);
-				return;
-			}
-			log('info', `Peer connection signaling state: ${pc.signalingState}`);
-			// Only apply answer if we're expecting one (have-local-offer state)
-			if (pc.signalingState !== 'have-local-offer') {
-				log('warn', `Received answer but signaling state is ${pc.signalingState}, expected 'have-local-offer'. Ignoring answer.`);
-				return;
-			}
-			try {
-				log('info', `Setting remote description from answer...`);
-				const remoteDesc = new RTCSessionDescription(data.sdp);
-				log('info', `Remote description object: type=${remoteDesc.type}`);
-				await pc.setRemoteDescription(remoteDesc);
-				log('success', `Answer applied successfully`);
-				log('info', `Connection state: ${pc.connectionState}, ICE state: ${pc.iceConnectionState}`);
-			} catch (e) {
-				log('error', `Failed to apply answer: ${e.message}`);
-				console.error('Answer error:', e);
-			}
-		});
-		state.socket.on('ice-candidate', async (data) => {
-			const pc = state.peerConnections[data.from];
-			if (!pc) {
-				log('warn', `Received ICE candidate but no peer connection for ${data.from}`);
-				return;
-			}
-			if (!data.candidate) {
-				log('info', `Received null ICE candidate (end of candidates)`);
-				return;
-			}
-			try {
-				await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-				log('info', `ICE candidate added from ${data.from}`);
-			} catch (e) {
-				log('warn', `Failed to add ICE candidate: ${e.message}`);
-			}
-		});
+      // FIX: Queue ICE candidates that arrive before remote description is set
+      state.socket.on('ice-candidate', async (data) => {
+        if (!data.candidate) return;
+        const pc = state.peerConnections[data.from];
+        if (!pc || !pc.remoteDescription?.type) {
+          if (!state.iceCandidateQueues[data.from]) state.iceCandidateQueues[data.from] = [];
+          state.iceCandidateQueues[data.from].push(data.candidate);
+          log('info', `ICE candidate queued for ${data.from}`);
+          return;
+        }
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        } catch (e) {
+          log('warn', `ICE add failed: ${e.message}`);
+        }
+      });
 
-		state.socket.on('disconnect', () => {
-			log('error', 'Disconnected from server');
-		});
+      // FIX: Clean up when peer leaves
+      state.socket.on('peer-left', (data) => {
+        log('info', `Peer left: ${data.id}`);
+        if (state.peerConnections[data.id]) {
+          state.peerConnections[data.id].close();
+          delete state.peerConnections[data.id];
+        }
+        delete state.iceCandidateQueues[data.id];
+        state.participants.delete(data.id);
+        document.getElementById(`participant-${data.id}`)?.remove();
+        // Clear remote video — stop all tracks first to release resources
+        if (els.remoteVideo.srcObject) {
+          els.remoteVideo.srcObject.getTracks?.().forEach(t => t.stop());
+          els.remoteVideo.srcObject = null;
+        }
+        els.remotePlaceholder.classList.remove('hidden');
+      });
 
-		state.socket.on('peer-left', (data) => {
-			log('info', `Peer left: ${data.id}`);
-			if (state.peerConnections[data.id]) {
-				log('info', `Closing peer connection for ${data.id}`);
-				state.peerConnections[data.id].close();
-				delete state.peerConnections[data.id];
-			}
-			// Remove participant from list
-			const participantEl = document.getElementById(`participant-${data.id}`);
-			if (participantEl) {
-				participantEl.remove();
-			}
-			state.participants.delete(data.id);
-		});
-	}
+      state.socket.on('disconnect', () => log('error', 'Disconnected from server'));
+    }
 
-		async function getLocalStream() {
-			if (state.localStream) return state.localStream;
+    // FIX: Drain queued ICE candidates once remote description is available
+    async function flushIceCandidates(peerId) {
+      const queue = state.iceCandidateQueues[peerId];
+      if (!queue?.length) return;
+      const pc = state.peerConnections[peerId];
+      if (!pc) return;
+      log('info', `Flushing ${queue.length} ICE candidates for ${peerId}`);
+      for (const c of queue) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(c)); }
+        catch (e) { log('warn', `Queued ICE failed: ${e.message}`); }
+      }
+      state.iceCandidateQueues[peerId] = [];
+    }
 
-			try {
-				state.localStream = await navigator.mediaDevices.getUserMedia({
-					video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-					audio: { echoCancellation: true, noiseSuppression: true }
-				});
+    async function getLocalStream() {
+      if (state.localStream) return state.localStream;
+      try {
+        state.localStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: { echoCancellation: true, noiseSuppression: true }
+        });
+        els.localVideo.srcObject = state.localStream;
+        els.localPlaceholder.classList.add('hidden');
+        log('success', 'Local stream acquired');
+        return state.localStream;
+      } catch (e) {
+        log('error', `Camera denied: ${e.message}`);
+        alert('Please allow camera and microphone access');
+        return null;
+      }
+    }
 
-				els.localVideo.srcObject = state.localStream;
-				els.localPlaceholder.classList.add('hidden');
-				log('success', 'Local stream acquired');
-				return state.localStream;
-			} catch (error) {
-				log('error', `Camera access denied: ${error.message}`);
-				alert('Please allow camera and microphone access');
-				return null;
-			}
-		}
+    function createPeerConnection(peerId, peerName) {
+      if (state.peerConnections[peerId]) return state.peerConnections[peerId];
 
-		function createPeerConnection(peerId, peerName) {
-			if (state.peerConnections[peerId]) {
-				return state.peerConnections[peerId];
-			}
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          // FIX: TURN server for peers behind strict NAT (crucial for cross-network calls)
+          {
+            urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
+        ]
+      });
 
-			const config = {
-				iceServers: [
-					{ urls: 'stun:stun.l.google.com:19302' },
-					{ urls: 'stun:stun1.l.google.com:19302' },
-					{ urls: 'stun:stun2.l.google.com:19302' }
-				]
-			};
+      pc.onicecandidate = (e) => {
+        if (e.candidate && state.socket) {
+          state.socket.emit('ice-candidate', { target: peerId, candidate: e.candidate });
+        }
+      };
 
-			const pc = new RTCPeerConnection(config);
+      // FIX: On connection established, force-play the remote video in case
+      // autoplay was blocked or the stream was set before connection was ready
+      pc.onconnectionstatechange = () => {
+        log('info', `[${peerName}] connection: ${pc.connectionState}`);
+        if (pc.connectionState === 'connected') {
+          if (els.remoteVideo.srcObject) {
+            els.remoteVideo.play().catch(() => { });
+            els.remotePlaceholder.classList.add('hidden');
+            log('success', `[${peerName}] Connection established — remote video playing`);
+          }
+        }
+        if (pc.connectionState === 'failed') {
+          log('error', `[${peerName}] Connection failed — attempting ICE restart`);
+          pc.restartIce();
+        }
+      };
 
-			pc.onicecandidate = (event) => {
-				if (event.candidate && state.socket) {
-					try {
-						state.socket.emit('ice-candidate', {
-							target: peerId,
-							candidate: event.candidate
-						});
-						log('info', `ICE candidate sent to ${peerName}`);
-					} catch (e) {
-						log('warn', `Failed to send ICE candidate: ${e.message}`);
-					}
-				}
-			};
+      pc.oniceconnectionstatechange = () => {
+        log('info', `[${peerName}] ICE: ${pc.iceConnectionState}`);
+        // FIX: On ICE connected/completed, ensure video is playing
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          if (els.remoteVideo.srcObject) {
+            els.remoteVideo.play().catch(() => { });
+            els.remotePlaceholder.classList.add('hidden');
+          }
+        }
+      };
 
-			pc.onconnectionstatechange = () => {
-				log('info', `Connection state: ${pc.connectionState}`);
-			};
+      // FIX: Robust ontrack — always build a stable MediaStream, set srcObject once,
+      // and ensure video plays when both audio+video tracks have arrived
+      const remoteStream = new MediaStream();
+      els.remoteVideo.srcObject = remoteStream;
 
-			pc.oniceconnectionstatechange = () => {
-				log('info', `ICE connection state: ${pc.iceConnectionState}`);
-			};
+      pc.ontrack = (event) => {
+        log('success', `Track received from ${peerName}: ${event.track.kind}`);
 
-			pc.ontrack = (event) => {
-				log('success', `Received remote ${event.track.kind} track from ${peerName}`);
+        // Prefer adding from the event stream directly for stream continuity
+        if (event.streams?.[0]) {
+          // Replace srcObject with the full stream from the event
+          els.remoteVideo.srcObject = event.streams[0];
+        } else {
+          // Fallback: manually add track to our pre-built stream
+          remoteStream.addTrack(event.track);
+          els.remoteVideo.srcObject = remoteStream;
+        }
 
-				// Try to use the stream from the event first
-				if (event.streams && event.streams.length > 0) {
-					log('info', `Track stream available with ${event.streams[0].getTracks().length} track(s), setting remote video source`);
-					const stream = event.streams[0];
+        // Always attempt play; browser may suppress autoplay until user gesture
+        els.remoteVideo.play().catch(e => log('warn', `play() suppressed: ${e.message}`));
+        els.remotePlaceholder.classList.add('hidden');
+      };
 
-					// Verify the stream has tracks before setting
-					if (stream.getTracks().length > 0) {
-						els.remoteVideo.srcObject = stream;
-						els.remoteVideo.play().catch(err => log('warn', `Could not autoplay video: ${err.message}`));
-						els.remotePlaceholder.classList.add('hidden');
-						log('success', `Remote video displayed from ${peerName}`);
-					} else {
-						log('warn', `Stream has no tracks yet`);
-					}
-				} else if (event.track) {
-					log('warn', `Track received but no stream. Creating MediaStream manually...`);
-					const stream = new MediaStream();
-					stream.addTrack(event.track);
-					els.remoteVideo.srcObject = stream;
-					els.remoteVideo.play().catch(err => log('warn', `Could not autoplay video: ${err.message}`));
-					els.remotePlaceholder.classList.add('hidden');
-					log('success', `Remote video displayed (manual stream) from ${peerName}`);
-				}
-			};
+      if (state.localStream) {
+        state.localStream.getTracks().forEach(t => pc.addTrack(t, state.localStream));
+      }
 
-			pc.onicecandidateerror = (event) => {
-				log('warn', `ICE candidate error: ${event.errorText}`);
-			};
+      state.peerConnections[peerId] = pc;
+      state.iceCandidateQueues[peerId] = [];
+      log('info', `Peer connection created for ${peerName}`);
+      return pc;
+    }
 
-			// Add local tracks
-			if (state.localStream) {
-				state.localStream.getTracks().forEach(track => {
-					pc.addTrack(track, state.localStream);
-					log('info', `Added local ${track.kind} track to peer connection`);
-				});
-			}
+    // FIX: Extracted helper — creates PC and sends offer
+    async function sendOffer(peerId, peerName) {
+      const pc = createPeerConnection(peerId, peerName);
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        state.socket.emit('offer', { target: peerId, sdp: pc.localDescription, name: state.displayName });
+        log('success', `Offer sent to ${peerName}`);
+      } catch (e) {
+        log('error', `Offer failed for ${peerName}: ${e.message}`);
+      }
+    }
 
-			state.peerConnections[peerId] = pc;
-			log('info', `Peer connection created for ${peerName}`);
-			return pc;
-		}
+    function addParticipant(id, name) {
+      if (state.participants.has(id)) return;
+      state.participants.set(id, name);
+      const item = document.createElement('div');
+      item.className = 'participant-item';
+      item.id = `participant-${id}`;
+      item.textContent = `👤 ${name}`;
+      els.participantsList.appendChild(item);
+    }
 
-		function addParticipant(id, name) {
-			state.participants.set(id, name);
-			const item = document.createElement('div');
-			item.className = 'participant-item';
-			item.id = `participant-${id}`;
-			item.textContent = `👤 ${name}`;
-			els.participantsList.appendChild(item);
-		}
+    function showCallScreen() {
+      els.setupScreen.classList.add('hidden');
+      els.callScreen.classList.add('active');
+      els.callRoomCode.textContent = state.roomCode || '--';
+    }
 
-		function showCallScreen() {
-			els.setupScreen.classList.add('hidden');
-			els.callScreen.classList.add('active');
-			els.callRoomCode.textContent = state.roomCode || '--';
-			log('success', `Room code displayed on screen: ${state.roomCode}`);
-		}
+    function resetUI() {
+      els.setupScreen.classList.remove('hidden');
+      els.callScreen.classList.remove('active');
+      els.roomInfo.classList.add('hidden');
+      els.joinForm.classList.add('hidden');
+      els.participantsList.innerHTML = '';
+      els.localVideo.srcObject = null;
+      els.remoteVideo.srcObject = null;
+      els.localPlaceholder.classList.remove('hidden');
+      els.remotePlaceholder.classList.remove('hidden');
+    }
 
-		function resetUI() {
-			els.setupScreen.classList.remove('hidden');
-			els.callScreen.classList.remove('active');
-			els.roomInfo.classList.add('hidden');
-			els.joinForm.classList.add('hidden');
-			els.participantsList.innerHTML = '';
-			els.localVideo.srcObject = null;
-			els.remoteVideo.srcObject = null;
-			els.localPlaceholder.classList.remove('hidden');
-			els.remotePlaceholder.classList.remove('hidden');
-		}
+    // ===== EVENT LISTENERS =====
+    els.createBtn.addEventListener('click', async () => {
+      const name = els.nameInput.value.trim();
+      if (!name) return alert('Enter your name');
+      state.displayName = name;
+      await getLocalStream();
+      // FIX: Don't show call screen yet — wait for peer-joined
+      state.socket.emit('create-room', { name });
+    });
 
-		// ===== EVENT LISTENERS =====
-		els.createBtn.addEventListener('click', async () => {
-			const name = els.nameInput.value.trim();
-			if (!name) return alert('Enter your name');
+    els.joinBtn.addEventListener('click', () => els.joinForm.classList.toggle('hidden'));
 
-			state.displayName = name;
-			log('info', `Creating room with name: ${name}`);
-			const stream = await getLocalStream();
-			if (!stream) {
-				log('error', 'Failed to get local stream, cannot create room');
-				return;
-			}
-			log('info', 'Emitting create-room event to server...');
-			state.socket.emit('create-room', { name });
-			// Don't call showCallScreen here - wait for room-created event
-		});
+    els.joinSubmitBtn.addEventListener('click', async () => {
+      const roomCode = els.roomCodeInput.value.trim().toUpperCase();
+      const name = els.nameInput.value.trim();
+      if (!roomCode || !name) return alert('Enter room code and name');
+      state.roomCode = roomCode;
+      state.displayName = name;
+      await getLocalStream();
+      state.socket.emit('join-room', { roomId: roomCode, name });
+    });
 
-		els.joinBtn.addEventListener('click', () => {
-			els.joinForm.classList.toggle('hidden');
-		});
+    els.copyCodeBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(state.roomCode);
+      els.copyCodeBtn.textContent = 'Copied!';
+      setTimeout(() => { els.copyCodeBtn.textContent = 'Copy Code'; }, 2000);
+    });
 
-		els.joinSubmitBtn.addEventListener('click', async () => {
-			const roomCode = els.roomCodeInput.value.trim();
-			const name = els.nameInput.value.trim();
-			if (!roomCode || !name) return alert('Enter room code and name');
+    els.micBtn.addEventListener('click', () => {
+      state.micEnabled = !state.micEnabled;
+      state.localStream?.getAudioTracks().forEach(t => t.enabled = state.micEnabled);
+      els.micBtn.classList.toggle('active', state.micEnabled);
+      state.socket?.emit('media-state', { video: state.cameraEnabled, audio: state.micEnabled });
+    });
 
-			state.roomCode = roomCode;
-			state.displayName = name;
-			await getLocalStream();
-			state.socket.emit('join-room', { roomId: roomCode, name });
-		});
+    els.cameraBtn.addEventListener('click', () => {
+      state.cameraEnabled = !state.cameraEnabled;
+      state.localStream?.getVideoTracks().forEach(t => t.enabled = state.cameraEnabled);
+      els.cameraBtn.classList.toggle('active', state.cameraEnabled);
+      els.localPlaceholder.classList.toggle('hidden', state.cameraEnabled);
+      state.socket?.emit('media-state', { video: state.cameraEnabled, audio: state.micEnabled });
+    });
 
-		els.copyCodeBtn.addEventListener('click', () => {
-			navigator.clipboard.writeText(state.roomCode);
-			els.copyCodeBtn.textContent = 'Copied!';
-			setTimeout(() => { els.copyCodeBtn.textContent = 'Copy Code'; }, 2000);
-		});
+    // FIX: Safe end call — check socket exists before emit/disconnect
+    els.endBtn.addEventListener('click', () => {
+      if (state.socket) state.socket.emit('leave-room');
+      state.localStream?.getTracks().forEach(t => t.stop());
+      Object.values(state.peerConnections).forEach(pc => pc.close());
+      if (state.socket?.connected) state.socket.disconnect();
+      state.socket = null;
+      state.localStream = null;
+      state.peerConnections = {};
+      state.iceCandidateQueues = {};
+      state.participants.clear();
+      state.roomCode = null;
+      resetUI();
+      initSocket();
+    });
 
-		els.micBtn.addEventListener('click', () => {
-			state.micEnabled = !state.micEnabled;
-			state.localStream?.getAudioTracks().forEach(t => t.enabled = state.micEnabled);
-			els.micBtn.classList.toggle('active', state.micEnabled);
-		});
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'm' || e.key === 'M') els.micBtn.click();
+      if (e.key === 'c' || e.key === 'C') els.cameraBtn.click();
+      if (e.key === 'e' || e.key === 'E') els.endBtn.click();
+    });
 
-		els.cameraBtn.addEventListener('click', () => {
-			state.cameraEnabled = !state.cameraEnabled;
-			state.localStream?.getVideoTracks().forEach(t => t.enabled = state.cameraEnabled);
-			els.cameraBtn.classList.toggle('active', state.cameraEnabled);
-			els.localPlaceholder.classList.toggle('hidden', state.cameraEnabled);
-		});
-
-		els.endBtn.addEventListener('click', () => {
-			state.localStream?.getTracks().forEach(t => t.stop());
-			Object.values(state.peerConnections).forEach(pc => pc.close());
-			state.socket.disconnect();
-			state.socket = null;
-			state.localStream = null;
-			state.peerConnections = {};
-			state.participants.clear();
-			resetUI();
-			initSocket();
-		});
-
-		// Keyboard shortcuts
-		document.addEventListener('keydown', (e) => {
-			if (e.target.tagName === 'INPUT') return;
-			if (e.key === 'm' || e.key === 'M') els.micBtn.click();
-			if (e.key === 'c' || e.key === 'C') els.cameraBtn.click();
-			if (e.key === 'e' || e.key === 'E') els.endBtn.click();
-		});
-
-		// Initialize
-		initSocket();
-		log('success', 'Video call page initialized');
-	</script>
+    initSocket();
+    log('success', 'Video call page initialized');
+  </script>
 </body>
+
 </html>
