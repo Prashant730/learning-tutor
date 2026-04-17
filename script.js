@@ -316,7 +316,8 @@ document.addEventListener('DOMContentLoaded', initDashboard)
 // Load socket.io library dynamically from backend
 function loadSocketIO() {
   return new Promise((resolve, reject) => {
-    const backendUrl = window.BACKEND_URL || 'http://localhost:3000'
+    const backendUrl =
+      window.BACKEND_URL || 'https://learning-tutor-api.onrender.com'
     const script = document.createElement('script')
     script.src = `${backendUrl}/socket.io/socket.io.js`
     script.async = true
@@ -405,7 +406,8 @@ function initVideoCall() {
 
   async function loadWebRtcConfig() {
     try {
-      const backendUrl = window.BACKEND_URL || 'http://localhost:3000'
+      const backendUrl =
+        window.BACKEND_URL || 'https://learning-tutor-api.onrender.com'
       const response = await fetch(`${backendUrl}/api/webrtc-config`)
       if (!response.ok) return
 
@@ -697,8 +699,9 @@ function initVideoCall() {
       return
     }
 
-    // Connect to backend socket.io server (default: localhost:3000)
-    const backendUrl = window.BACKEND_URL || 'http://localhost:3000'
+    // Connect to backend socket.io server (default: Render production)
+    const backendUrl =
+      window.BACKEND_URL || 'https://learning-tutor-api.onrender.com'
     socket = window.io(backendUrl, {
       reconnection: true,
       reconnectionDelay: 1000,

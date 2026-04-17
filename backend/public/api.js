@@ -1,5 +1,5 @@
 // ─── API Client ──────────────────────────────────────────────────────────────
-const API_BASE = '/api'
+const API_BASE = 'https://learning-tutor-api.onrender.com/api'
 
 function getToken() {
   return localStorage.getItem('auth_token')
