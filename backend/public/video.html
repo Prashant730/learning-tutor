@@ -1230,8 +1230,9 @@
 				if (peers.length > 0) {
 					const peer = peers[0];
 					remotePeerId = peer.id;
-					console.log('Found existing peer:', remotePeerId);
+					console.log('Found existing peer:', remotePeerId, 'name:', peer.name);
 					createPeerConnection();
+					addParticipant(peer.name, 2, true);
 					flushOutgoingIceCandidates();
 					createOffer();
 				} else {
@@ -1251,10 +1252,11 @@
 				addParticipant(name, 2, true);
 			});
 
-			socket.on('offer', async ({ from, offer }) => {
-				console.log('Received offer from:', from);
+			socket.on('offer', async ({ from, name, offer }) => {
+				console.log('Received offer from:', from, 'name:', name);
 				remotePeerId = from;
 				createPeerConnection();
+				if (name) addParticipant(name, 2, true);
 				await createAnswer(offer);
 			});
 
