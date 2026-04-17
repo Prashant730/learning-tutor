@@ -661,6 +661,12 @@
 				log('error', `Peer connection not found for ${data.from} when handling answer`);
 				return;
 			}
+			log('info', `Peer connection signaling state: ${pc.signalingState}`);
+			// Only apply answer if we're expecting one (have-local-offer state)
+			if (pc.signalingState !== 'have-local-offer') {
+				log('warn', `Received answer but signaling state is ${pc.signalingState}, expected 'have-local-offer'. Ignoring answer.`);
+				return;
+			}
 			try {
 				log('info', `Setting remote description from answer...`);
 				const remoteDesc = new RTCSessionDescription(data.sdp);
@@ -754,17 +760,30 @@
 			};
 
 			pc.ontrack = (event) => {
-				log('success', `Received remote ${event.track.kind} track from ${peerName}`);
+				log('success', `Received remote ${event.track.kind} track from ${peerName} (enabled: ${event.track.enabled})`);
+
+				// Try to use the stream from the event first
 				if (event.streams && event.streams.length > 0) {
-					log('info', `Track stream available, setting remote video source`);
-					els.remoteVideo.srcObject = event.streams[0];
-					els.remotePlaceholder.classList.add('hidden');
-					log('success', `Remote video displayed from ${peerName}`);
+					log('info', `Track stream available with ${event.streams[0].getTracks().length} track(s), setting remote video source`);
+					const stream = event.streams[0];
+
+					// Verify the stream has tracks before setting
+					if (stream.getTracks().length > 0) {
+						els.remoteVideo.srcObject = stream;
+						els.remoteVideo.play().catch(err => log('warn', `Could not autoplay video: ${err.message}`));
+						els.remotePlaceholder.classList.add('hidden');
+						log('success', `Remote video displayed from ${peerName}`);
+					} else {
+						log('warn', `Stream has no tracks yet`);
+					}
 				} else if (event.track) {
-					log('warn', `Track received but no streams. Creating MediaStream manually...`);
-					const stream = new MediaStream([event.track]);
+					log('warn', `Track received but no stream. Creating MediaStream manually...`);
+					const stream = new MediaStream();
+					stream.addTrack(event.track);
 					els.remoteVideo.srcObject = stream;
+					els.remoteVideo.play().catch(err => log('warn', `Could not autoplay video: ${err.message}`));
 					els.remotePlaceholder.classList.add('hidden');
+					log('success', `Remote video displayed (manual stream) from ${peerName}`);
 				}
 			};
 
@@ -797,7 +816,8 @@
 		function showCallScreen() {
 			els.setupScreen.classList.add('hidden');
 			els.callScreen.classList.add('active');
-			els.callRoomCode.textContent = state.roomCode;
+			els.callRoomCode.textContent = state.roomCode || '--';
+			log('success', `Room code displayed on screen: ${state.roomCode}`);
 		}
 
 		function resetUI() {
