@@ -575,8 +575,7 @@
 							const offer = await pc.createOffer();
 							await pc.setLocalDescription(offer);
 							state.socket.emit('offer', {
-								to: peer.id,
-								from: state.socket.id,
+								target: peer.id,
 								sdp: pc.localDescription,
 								name: state.displayName
 							});
@@ -599,8 +598,7 @@
 						const offer = await pc.createOffer();
 						await pc.setLocalDescription(offer);
 						state.socket.emit('offer', {
-							to: data.id,
-							from: state.socket.id,
+							target: data.id,
 							sdp: pc.localDescription,
 							name: state.displayName
 						});
@@ -622,8 +620,7 @@
 					const answer = await pc.createAnswer();
 					await pc.setLocalDescription(answer);
 					state.socket.emit('answer', {
-						to: data.from,
-						from: state.socket.id,
+					target: data.from,
 						sdp: pc.localDescription
 					});
 					log('info', `Answer sent to ${data.name}`);
@@ -698,13 +695,16 @@
 			const pc = new RTCPeerConnection(config);
 
 			pc.onicecandidate = (event) => {
-				if (event.candidate) {
-					state.socket.emit('ice-candidate', {
-						to: peerId,
-						from: state.socket.id,
-						candidate: event.candidate
-					});
-					log('info', `ICE candidate sent to ${peerName}`);
+				if (event.candidate && state.socket) {
+					try {
+						state.socket.emit('ice-candidate', {
+							target: peerId,
+							candidate: event.candidate
+						});
+						log('info', `ICE candidate sent to ${peerName}`);
+					} catch (e) {
+						log('warn', `Failed to send ICE candidate: ${e.message}`);
+					}
 				}
 			};
 
