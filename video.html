@@ -1025,98 +1025,94 @@
 				setStatus('Connected', 'connected');
 				localUserId = socket.id;
 
-				// If this is just the initial page load connection, we don't need to create/join a room yet.
-				if (isInitialConnection) {
-					console.log('Initial connection established. Ready for user action.');
-					return;
-				}
+			if (isInitialConnection) {
+				console.log('Initial connection established. Ready for user action.');
+				return;
+			}
 
-				// If it's not an initial connection, proceed with creating or joining a room.
-				if (roomId) {
-					console.log(`Joining room: ${roomId} as ${name}`);
-					socket.emit('join-room', { roomId, name });
-				} else {
-					console.log(`Creating a new room as ${name}`);
-					socket.emit('create-room', { name });
-				}
-			});
+			if (roomId) {
+				console.log(`Joining room: ${roomId} as ${name}`);
+				socket.emit('join-room', { roomId, name });
+			} else {
+				console.log(`Creating a new room as ${name}`);
+				socket.emit('create-room', { name });
+			}
+		});
 
-			socket.on('room-created', (data) => {
+		socket.on('room-created', (data) => {
 			console.log('🎉 Room created event received!', data);
 			roomCode = data.roomId;
 			displayName = data.name;
 			document.getElementById('share-room-code').textContent = roomCode;
 			console.log(`✅ Updated UI with room code: ${roomCode}`);
-				callScreen.classList.remove('hidden');
-			});
+			setupScreen.classList.add('hidden');
+			callScreen.classList.remove('hidden');
+		});
 
-			socket.on('room-joined', (data) => {
-				console.log('Successfully joined room:', data);
-				roomCode = data.roomId;
-				displayName = data.name;
-				setupScreen.classList.add('hidden');
-				callScreen.classList.remove('hidden');
-			});
+		socket.on('room-joined', (data) => {
+			console.log('Successfully joined room:', data);
+			roomCode = data.roomId;
+			displayName = data.name;
+			setupScreen.classList.add('hidden');
+			callScreen.classList.remove('hidden');
+		});
 
-			socket.on('room-peers', (data) => {
-				console.log('Room peers:', data);
-				if (data.peers && data.peers.length > 0) {
-					data.peers.forEach(peer => {
-						if (peer.id !== socket.id) {
-							addParticipant(peer.id, peer.name);
-							if (!peerConnections[peer.id]) {
-								const peerConnection = createPeerConnection(peer.id, peer.name);
-								peerConnection.createOffer().then(offer => {
-									return peerConnection.setLocalDescription(offer);
-								}).then(() => {
-									socket.emit('offer', {
-										target: peer.id,
-										sdp: peerConnection.localDescription,
-										name: displayName
-									});
-								}).catch(error => console.error('Error creating offer:', error));
-							}
+		socket.on('room-peers', (data) => {
+			console.log('Room peers:', data);
+			if (data.peers && data.peers.length > 0) {
+				data.peers.forEach(peer => {
+					if (peer.id !== socket.id) {
+						addParticipant(peer.id, peer.name);
+						if (!peerConnections[peer.id]) {
+							const peerConnection = createPeerConnection(peer.id, peer.name);
+							peerConnection.createOffer().then(offer => {
+								return peerConnection.setLocalDescription(offer);
+							}).then(() => {
+								socket.emit('offer', {
+									target: peer.id,
+									sdp: peerConnection.localDescription,
+									name: displayName
+								});
+							}).catch(error => console.error('Error creating offer:', error));
 						}
-					});
-				}
-			});
+					}
+				});
+			}
+		});
 
-			socket.on('peer-joined', (data) => {
-				console.log('Peer joined:', data);
-				if (data.id !== socket.id) {
-					addParticipant(data.id, data.name);
-				}
-			});
+		socket.on('peer-joined', (data) => {
+			console.log('Peer joined:', data);
+			if (data.id !== socket.id) {
+				addParticipant(data.id, data.name);
+			}
+		});
 
-			socket.on('offer', async (data) => {
-				console.log('Received offer from:', data.from);
-				if (!peerConnections[data.from]) {
-					const peerConnection = createPeerConnection(data.from, data.name);
-					peerConnections[data.from] = peerConnection;
-				}
+		socket.on('offer', async (data) => {
+			console.log('Received offer from:', data.from);
+			if (!peerConnections[data.from]) {
+				const peerConnection = createPeerConnection(data.from, data.name);
+				peerConnections[data.from] = peerConnection;
+			}
 
-				const peerConnection = peerConnections[data.from];
-				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+			const peerConnection = peerConnections[data.from];
+			await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
 			await flushIncomingIceCandidates(data.from);
 
 			const answer = await peerConnection.createAnswer();
 			await peerConnection.setLocalDescription(answer);
-				if (peerConnection) {
-					await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-					await flushIncomingIceCandidates();
-				}
+			socket.emit('answer', {
+				target: data.from,
+				sdp: peerConnection.localDescription,
+				name: displayName
 			});
+		});
 
-			socket.on('ice-candidate', (data) => {
-				const peerConnection = peerConnections[data.from];
-				if (peerConnection) {
-					if (peerConnection.remoteDescription) {
-						peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(error => {
-							console.error('Error adding ICE candidate:', error);
-						});
-					} else {
-						pendingIncomingIceCandidates[data.from] = pendingIncomingIceCandidates[data.from] || [];
-						pendingIncomingIceCandidates[data.from].push(data.candidate);
+		socket.on('answer', async (data) => {
+			console.log('Received answer from:', data.from);
+			const peerConnection = peerConnections[data.from];
+			if (peerConnection) {
+				await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+				await flushIncomingIceCandidates(data.from);
 					}
 				}
 			});
