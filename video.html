@@ -966,13 +966,38 @@
 			setStatus('Requesting camera...', 'pending');
 
 			try {
-				localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+				// Proper video constraints for better Mac compatibility
+				const constraints = {
+					video: {
+						facingMode: 'user', // Front camera on mobile, user-facing on Mac
+						width: { ideal: 1280 },
+						height: { ideal: 720 },
+						frameRate: { ideal: 30 }
+					},
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true
+					}
+				};
+
+				console.log('📷 Requesting camera with constraints:', constraints);
+				localStream = await navigator.mediaDevices.getUserMedia(constraints);
+				console.log('✅ Camera access granted!');
+				console.log('📹 Video tracks:', localStream.getVideoTracks());
+				console.log('🎤 Audio tracks:', localStream.getAudioTracks());
+
 				const localVideo = document.getElementById('local-video');
 				localVideo.srcObject = localStream;
 				document.getElementById('local-placeholder').style.display = 'none';
 			} catch (e) {
-				console.error('Camera/mic error:', e);
-				setStatus('Camera/mic not available', 'error');
+				console.error('❌ Camera/mic error:', e);
+				console.error('Error details:', {
+					name: e.name,
+					message: e.message,
+					stack: e.stack
+				});
+				setStatus('Camera/mic not available: ' + e.message, 'error');
 				return;
 			}
 
