@@ -907,499 +907,56 @@
 		}
 
 		// ── Create RTCPeerConnection ──
-		function createPeerConnection() {
-			if (peerConnection) return peerConnection;
-
-			peerConnection = new RTCPeerConnection(rtcConfig);
-
-			if (localStream) {
-				localStream.getTracks().forEach(track => {
-					peerConnection.addTrack(track, localStream);
-				});
+		function createPeerConnection(remotePeerId, name) {
+			console.log(`Creating peer connection for remote peer: ${remotePeerId} (${name})`);
+			if (peerConnections[remotePeerId]) {
+				console.warn(`Peer connection for ${remotePeerId} already exists.`);
+				return peerConnections[remotePeerId];
 			}
 
-			peerConnection.ontrack = (event) => {
-				console.log('Remote track received:', event.track.kind);
-				const remoteVideo = document.getElementById('remote-video');
-				remoteVideo.srcObject = event.streams[0];
-				document.getElementById('remote-placeholder').style.display = 'none';
-				setStatus('Connected', 'connected');
-			};
+			const peerConnection = new RTCPeerConnection(rtcConfig);
+			peerConnections[remotePeerId] = peerConnection;
 
 			peerConnection.onicecandidate = (event) => {
 				if (event.candidate) {
-					const cand = event.candidate;
-					const candStr = cand.candidate || '';
-					const candType = candStr.includes('srflx') ? 'SRFLX (Server Reflexive)' :
-									candStr.includes('relay') ? '🔄 TURN RELAY' :
-									candStr.includes('host') ? 'HOST' : 'UNKNOWN';
-
-					console.log(`❄️ New ICE candidate [${candType}]:`, {
-						type: candType,
-						address: cand.address,
-						port: cand.port,
-						protocol: cand.protocol,
-						priority: cand.priority,
-						sdpMid: cand.sdpMid
+					console.log(`[${socket.id}] Sending ICE candidate to ${remotePeerId}`);
+					socket.emit('ice-candidate', {
+						target: remotePeerId,
+						candidate: event.candidate
 					});
+				}
+			};
 
-					if (socket && remotePeerId) {
-						socket.emit('ice-candidate', {
-							to: remotePeerId,
-							candidate: event.candidate
-						});
-						console.log('✅ Candidate sent to peer');
-					} else {
-						pendingOutgoingIceCandidates.push(event.candidate);
-						console.log('⏳ Candidate queued until peer is ready');
-					}
-				} else {
-					console.log('✅ ICE gathering completed - all candidates sent');
-					localCandidatesGathered = true;
+			peerConnection.ontrack = (event) => {
+				console.log(`[${socket.id}] Received remote track from ${remotePeerId}`);
+				addParticipant(remotePeerId, name, event.streams[0]);
+			};
+
+			peerConnection.oniceconnectionstatechange = () => {
+				console.log(`[${socket.id}] ICE connection state change for ${remotePeerId}: ${peerConnection.iceConnectionState}`);
+				if (peerConnection.iceConnectionState === 'failed' || peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'closed') {
+					console.error(`[${socket.id}] ICE connection for ${remotePeerId} failed. State: ${peerConnection.iceConnectionState}`);
+					// Consider cleanup or reconnection logic here
 				}
 			};
 
 			peerConnection.onconnectionstatechange = () => {
-				console.log('🔗 Connection state:', peerConnection.connectionState);
-				console.log('   ICE connection state:', peerConnection.iceConnectionState);
-				console.log('   ICE gathering state:', peerConnection.iceGatheringState);
-
-				if (peerConnection.connectionState === 'connected') {
-					console.log('✅ Peer connection established successfully!');
-					setStatus('Connected', 'connected');
-				} else if (peerConnection.connectionState === 'connecting') {
-					console.log('⏳ Connecting to peer...');
-					setStatus('Connecting...', 'pending');
-				} else if (peerConnection.connectionState === 'failed') {
-					console.error('❌ Connection failed - analyzing ICE state...');
-					console.error('   Ice connection state:', peerConnection.iceConnectionState);
-					console.error('   Signaling state:', peerConnection.signalingState);
-
-					// Log ICE candidates gathered
-					const stats = peerConnection.getStats();
-					stats.then(report => {
-						report.forEach(stat => {
-							if (stat.type === 'candidate-pair' && stat.state === 'succeeded') {
-								console.log('✅ Working candidate pair found:', stat);
-							}
-						});
-					});
-
-					setStatus('Connection failed - retrying...', 'error');
-					// Attempt ICE restart after short delay
-					setTimeout(() => {
-						if (peerConnection && peerConnection.connectionState === 'failed') {
-							console.log('🔄 Attempting ICE restart...');
-							try {
-								peerConnection.restartIce();
-								console.log('✅ ICE restart initiated');
-							} catch (e) {
-								console.error('❌ ICE restart failed:', e);
-							}
-						}
-					}, 2000);
-				} else if (peerConnection.connectionState === 'disconnected') {
-					console.warn('⚠️ Connection disconnected');
-					setStatus('Disconnected', 'pending');
-				} else if (peerConnection.connectionState === 'closed') {
-					console.warn('⚠️ Connection closed');
-					setStatus('Connection closed', 'error');
-				}
+				console.log(`[${socket.id}] Connection state change for ${remotePeerId}: ${peerConnection.connectionState}`);
 			};
 
-			// Monitor ICE connection state for better diagnostics
-			peerConnection.oniceconnectionstatechange = () => {
-				console.log('❄️ ICE connection state:', peerConnection.iceConnectionState);
-				if (peerConnection.iceConnectionState === 'failed') {
-					console.error('❌ ICE connection failed - TURN relay may be needed');
-				} else if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
-					console.log('✅ ICE connection successful');
-				}
+			peerConnection.onsignalingstatechange = () => {
+				console.log(`[${socket.id}] Signaling state change for ${remotePeerId}: ${peerConnection.signalingState}`);
 			};
 
-			// Monitor ICE gathering state
-			peerConnection.onicegatheringstatechange = () => {
-				console.log('❄️ ICE gathering state:', peerConnection.iceGatheringState);
-			};
+			localStream.getTracks().forEach(track => {
+				console.log(`[${socket.id}] Adding local track to peer connection for ${remotePeerId}`);
+				peerConnection.addTrack(track, localStream);
+			});
 
 			return peerConnection;
 		}
 
-		// ── Create offer ──
-		async function createOffer() {
-			if (!peerConnection) return;
-			try {
-				console.log('📝 Creating WebRTC offer...');
-				const offer = await peerConnection.createOffer();
-				console.log('✅ Offer created:', offer);
-
-				console.log('📥 Setting local description...');
-				await peerConnection.setLocalDescription(offer);
-
-				console.log('📡 Sending offer to peer...');
-				socket.emit('offer', {
-					to: remotePeerId,
-					offer: {
-						type: 'offer',
-						sdp: offer.sdp
-					}
-				});
-				console.log('✅ Offer sent successfully');
-			} catch (e) {
-				console.error('❌ Failed to create offer:', e);
-				console.error('Error details:', {
-					name: e.name,
-					message: e.message,
-					stack: e.stack
-				});
-				setStatus('Failed to create offer: ' + e.message, 'error');
-			}
-		}
-
-		// ── Create answer ──
-		async function createAnswer(offer) {
-			if (!peerConnection) return;
-			try {
-				console.log('📝 Creating answer for offer:', offer);
-
-				// Ensure offer has proper type
-				const offerWithType = {
-					type: 'offer',
-					sdp: offer.sdp || offer
-				};
-
-				console.log('📥 Setting remote description with offer...');
-				await peerConnection.setRemoteDescription(offerWithType);
-
-				console.log('⏳ Creating answer...');
-				const answer = await peerConnection.createAnswer();
-
-				console.log('📤 Setting local description with answer...');
-				await peerConnection.setLocalDescription(answer);
-
-				// Wait briefly for candidates to gather (gives TURN servers a chance)
-				console.log('⏳ Waiting for ICE candidates to gather... (3 seconds for TURN servers)');
-				await new Promise(resolve => {
-					const checkInterval = setInterval(() => {
-						const iceGathering = peerConnection.iceGatheringState;
-						if (iceGathering === 'complete') {
-							console.log('✅ ICE gathering complete!');
-							clearInterval(checkInterval);
-							resolve();
-						}
-					}, 100);
-
-					// Timeout after 3 seconds (allow time for TURN)
-					setTimeout(() => {
-						clearInterval(checkInterval);
-						console.warn('⏱️ ICE gathering timeout - proceeding anyway');
-						resolve();
-					}, 3000);
-				});
-
-				console.log('📡 Sending answer back to peer...');
-				socket.emit('answer', {
-					to: remotePeerId,
-					answer: {
-						type: 'answer',
-						sdp: answer.sdp
-					}
-				});
-				console.log('✅ Answer sent successfully');
-			} catch (e) {
-				console.error('❌ Failed to create answer:', e);
-				console.error('Error details:', {
-					name: e.name,
-					message: e.message,
-					stack: e.stack
-				});
-				setStatus('Failed to create answer: ' + e.message, 'error');
-			}
-		}
-
-		// ── Create call ──
-		document.getElementById('create-call-btn').addEventListener('click', async () => {
-			displayName = document.getElementById('display-name-input').value.trim() || 'Student';
-			roomCode = 'ROOM-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-			document.getElementById('share-room-code').textContent = roomCode;
-			document.getElementById('active-room-code').textContent = roomCode;
-			document.getElementById('room-code-input').value = roomCode;
-			await startCall();
-		});
-
-		// ── Join call ──
-		document.getElementById('join-call-btn').addEventListener('click', async () => {
-			const code = document.getElementById('room-code-input').value.trim();
-			displayName = document.getElementById('display-name-input').value.trim() || 'Student';
-			if (!code) { alert('Enter a room code first.'); return; }
-			roomCode = code;
-			document.getElementById('active-room-code').textContent = roomCode;
-			await startCall();
-		});
-
-		// ── Copy code ──
-		document.getElementById('copy-room-btn').addEventListener('click', () => {
-			const code = document.getElementById('share-room-code').textContent;
-			if (code === 'Not created yet') { alert('Create a room first.'); return; }
-			navigator.clipboard.writeText(code).then(() => alert('Room code copied!'));
-		});
-
-		// ── Start call ──
-		async function startCall() {
-			setupScreen.classList.add('hidden');
-			callScreen.classList.remove('hidden');
-			setStatus('Requesting camera...', 'pending');
-
-			try {
-				// Proper video constraints for better Mac compatibility
-				const constraints = {
-					video: {
-						facingMode: 'user', // Front camera on mobile, user-facing on Mac
-						width: { ideal: 1280 },
-						height: { ideal: 720 },
-						frameRate: { ideal: 30 }
-					},
-					audio: {
-						echoCancellation: true,
-						noiseSuppression: true,
-						autoGainControl: true
-					}
-				};
-
-				console.log('📷 Requesting camera with constraints:', constraints);
-				localStream = await navigator.mediaDevices.getUserMedia(constraints);
-				console.log('✅ Camera access granted!');
-				console.log('📹 Video tracks:', localStream.getVideoTracks());
-				console.log('🎤 Audio tracks:', localStream.getAudioTracks());
-
-				const localVideo = document.getElementById('local-video');
-				localVideo.srcObject = localStream;
-				document.getElementById('local-placeholder').style.display = 'none';
-			} catch (e) {
-				console.error('❌ Camera/mic error:', e);
-				console.error('Error details:', {
-					name: e.name,
-					message: e.message,
-					stack: e.stack
-				});
-				setStatus('Camera/mic not available: ' + e.message, 'error');
-				return;
-			}
-
-			setStatus('Connecting to room...', 'pending');
-			connectToServer();
-		}
-
-		// ── Connect to backend via Socket.io ──
-		async function connectToServer() {
-			backendUrl = await resolveBackendUrl();
-			rtcConfig = await loadRtcConfig();
-			console.log('🔌 Starting Socket.io connection to:', backendUrl);
-			console.log('🛰️ RTC config:', rtcConfig);
-
-			// Wait for Socket.io library to load
-			await waitForSocketIO();
-
-			if (typeof io === 'undefined') {
-				console.error('❌ Socket.io library failed to load');
-				setStatus('Failed to load Socket.io library', 'error');
-				console.error('Socket.io not loaded');
-				return;
-			}
-
-			console.log('📡 Creating Socket.io connection...');
-			socket = io(backendUrl, {
-				reconnection: true,
-				reconnectionDelay: 1000,
-				reconnectionDelayMax: 5000,
-				reconnectionAttempts: 5
-			});
-
-			socket.on('connect', () => {
-				console.log('✅ Socket connected successfully! Socket ID:', socket.id);
-				console.log('📤 Joining room:', roomCode);
-				socket.emit('join-room', {
-					roomCode: roomCode,
-					userName: displayName
-				});
-				setStatus('Joined room, waiting for peer...', 'pending');
-			});
-
-			socket.on('room-peers', (peers) => {
-				console.log('Room peers:', peers);
-				if (peers.length > 0) {
-					const peer = peers[0];
-					remotePeerId = peer.id;
-					console.log('Found existing peer:', remotePeerId, 'name:', peer.name);
-					createPeerConnection();
-					addParticipant(peer.name, 2, true);
-					flushOutgoingIceCandidates();
-					createOffer();
-				} else {
-					setStatus('Waiting for another participant...', 'pending');
-				}
-				addParticipant(displayName, 1, true);
-			});
-
-			socket.on('peer-joined', async ({ id, name }) => {
-				console.log('Peer joined:', id, name);
-				if (!remotePeerId) {
-					remotePeerId = id;
-					createPeerConnection();
-					flushOutgoingIceCandidates();
-					setStatus('Peer joined, establishing connection...', 'pending');
-				}
-				addParticipant(name, 2, true);
-			});
-
-			socket.on('offer', async ({ from, name, offer }) => {
-				console.log('Received offer from:', from, 'name:', name);
-				remotePeerId = from;
-				createPeerConnection();
-				if (name) addParticipant(name, 2, true);
-				await createAnswer(offer);
-			});
-
-			socket.on('answer', async ({ answer }) => {
-				console.log('📨 Received answer:', answer);
-				if (peerConnection) {
-					try {
-						// Ensure answer has proper type
-						const answerWithType = {
-							type: 'answer',
-							sdp: answer.sdp || answer
-						};
-						console.log('📥 Setting remote description with answer...');
-						await peerConnection.setRemoteDescription(answerWithType);
-						console.log('✅ Answer set successfully');
-						await flushIncomingIceCandidates();
-					} catch (e) {
-						console.error('❌ Failed to set answer:', e);
-						console.error('Error details:', {
-							name: e.name,
-							message: e.message,
-							answer: answer
-						});
-						setStatus('Failed to set answer: ' + e.message, 'error');
-					}
-				} else {
-					console.warn('⚠️ No peer connection when answer received');
-				}
-			});
-
-			socket.on('ice-candidate', async ({ candidate }) => {
-				if (peerConnection && candidate) {
-						if (!peerConnection.remoteDescription) {
-							pendingIncomingIceCandidates.push(candidate);
-							console.log('⏳ ICE candidate queued until remote description is set');
-							return;
-						}
-
-					try {
-						console.log('❄️ Adding ICE candidate:', candidate);
-						await peerConnection.addIceCandidate(candidate);
-						console.log('✅ ICE candidate added');
-					} catch (e) {
-						console.warn('⚠️ Failed to add ICE candidate:', e.message);
-						// Don't treat ICE candidate errors as fatal
-					}
-				}
-			});
-
-			socket.on('peer-left', () => {
-				console.log('Peer left');
-				if (peerConnection) {
-					peerConnection.close();
-					peerConnection = null;
-				}
-				document.getElementById('remote-video').srcObject = null;
-				document.getElementById('remote-placeholder').style.display = 'grid';
-				remotePeerId = null;
-				setStatus('Peer disconnected, waitin. Reason:', reason);
-
-				// Different handling based on disconnect reason
-				if (reason === 'io server disconnect') {
-					console.error('❌ Server forcefully disconnected');
-					setStatus('Server disconnected', 'error');
-				} else if (reason === 'transport close') {
-					console.warn('⚠️ Network transport closed - attempting to reconnect');
-					setStatus('Reconnecting...', 'pending');
-					// Keep peer connection alive - just reconnect socket
-				} else if (reason === 'transport error') {
-					console.error('❌ Transport error');
-					setStatus('Network error - reconnecting...', 'error');
-				} else {
-					console.warn('⚠️ Socket disconnected:', reason);
-					setStatus('Reconnecting...', 'pending');
-				}
-			});
-
-			// Socket reconnection events
-			socket.on('reconnect', () => {
-				console.log('✅ Socket reconnected successfully');
-				if (remotePeerId && peerConnection) {
-					console.log('🔄 Peer connection still active, resuming signaling');
-					setStatus('Connected', 'connected');
-				}
-			});
-
-			socket.on('reconnect_attempt', () => {
-				console.log('⏳ Attempting to reconnect socket...');
-			});
-
-			socket.on('reconnect_failed', () => {
-				console.error('❌ Failed to reconnect socket');
-				setStatus('Reconnection failed', 'error');cket.on('connect_error', (error) => {
-				console.error('❌ Socket connection error:', error);
-				console.error('Error details:', {
-					type: error.type,
-					message: error.message,
-					data: error.data
-				});
-				setStatus('Connection error: ' + (error.message || 'Unknown error'), 'error');
-			});
-
-			socket.on('disconnect', (reason) => {
-				console.warn('⚠️ Socket disconnected. Reason:', reason);
-
-				// Different handling based on disconnect reason
-				if (reason === 'io server disconnect') {
-					console.error('❌ Server forcefully disconnected');
-					setStatus('Server disconnected', 'error');
-				} else if (reason === 'transport close') {
-					console.warn('⚠️ Network transport closed - attempting to reconnect');
-					setStatus('Reconnecting...', 'pending');
-					// Keep peer connection alive - just reconnect socket
-				} else if (reason === 'transport error') {
-					console.error('❌ Transport error');
-					setStatus('Network error - reconnecting...', 'error');
-				} else {
-					console.warn('⚠️ Socket disconnected:', reason);
-					setStatus('Reconnecting...', 'pending');
-				}
-			});
-
-			// Socket reconnection events
-			socket.on('reconnect', () => {
-				console.log('✅ Socket reconnected successfully');
-				if (remotePeerId && peerConnection) {
-					console.log('🔄 Peer connection still active, resuming signaling');
-					setStatus('Connected', 'connected');
-				}
-			});
-
-			socket.on('reconnect_attempt', () => {
-				console.log('⏳ Attempting to reconnect socket...');
-			});
-
-			socket.on('reconnect_failed', () => {
-				console.error('❌ Failed to reconnect socket');
-				setStatus('Reconnection failed', 'error');
-			});
-		}
-
-		// ── Add participant card ──
-		function addParticipant(name, joinOrder, micOn, cameraOn = true) {
+		function addParticipant(peerId, name, stream) {
 			const list = document.getElementById('participants-list');
 			const row = document.createElement('div');
 			row.className = 'participant-row';
