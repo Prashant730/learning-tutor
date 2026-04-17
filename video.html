@@ -792,32 +792,31 @@
 				{ urls: 'stun:stun2.l.google.com:19302' },
 				{ urls: 'stun:stun3.l.google.com:19302' },
 				{ urls: 'stun:stun4.l.google.com:19302' },
-				// TURN servers for relay (when direct connection fails)
+				// Primary TURN servers
 				{
-					urls: 'turn:openrelay.metered.ca:80',
+					urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
 					username: 'openrelayproject',
 					credential: 'openrelayproject'
 				},
+				// Backup TURN servers
 				{
-					urls: 'turn:openrelay.metered.ca:443',
-					username: 'openrelayproject',
-					credential: 'openrelayproject'
+					urls: ['turn:numb.viagenie.ca:3478?transport=udp'],
+					username: 'webrtcdemo@gmail.com',
+					credential: 'webrtcdemo'
 				},
 				{
-					urls: 'turn:openrelay.metered.ca:80?transport=tcp',
-					username: 'openrelayproject',
-					credential: 'openrelayproject'
-				},
-				{
-					urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-					username: 'openrelayproject',
-					credential: 'openrelayproject'
+					urls: ['turn:numb.viagenie.ca:3478?transport=tcp'],
+					username: 'webrtcdemo@gmail.com',
+					credential: 'webrtcdemo'
 				}
 			],
-			iceCandidatePoolSize: 20,
+			iceCandidatePoolSize: 50,
 			bundlePolicy: 'max-bundle',
 			rtcpMuxPolicy: 'require'
 		};
+
+		let candidateTimeout = null;
+		let localCandidatesGathered = false;
 
 		// ── Update status ──
 		function setStatus(text, state = 'pending') {
@@ -848,11 +847,32 @@
 			};
 
 			peerConnection.onicecandidate = (event) => {
-				if (event.candidate && socket && remotePeerId) {
-					socket.emit('ice-candidate', {
-						to: remotePeerId,
-						candidate: event.candidate
+				if (event.candidate) {
+					const cand = event.candidate;
+					const candStr = cand.candidate || '';
+					const candType = candStr.includes('srflx') ? 'SRFLX (Server Reflexive)' :
+									candStr.includes('relay') ? '🔄 TURN RELAY' :
+									candStr.includes('host') ? 'HOST' : 'UNKNOWN';
+
+					console.log(`❄️ New ICE candidate [${candType}]:`, {
+						type: candType,
+						address: cand.address,
+						port: cand.port,
+						protocol: cand.protocol,
+						priority: cand.priority,
+						sdpMid: cand.sdpMid
 					});
+
+					if (socket && remotePeerId) {
+						socket.emit('ice-candidate', {
+							to: remotePeerId,
+							candidate: event.candidate
+						});
+						console.log('✅ Candidate sent to peer');
+					}
+				} else {
+					console.log('✅ ICE gathering completed - all candidates sent');
+					localCandidatesGathered = true;
 				}
 			};
 
@@ -973,6 +993,26 @@
 
 				console.log('📤 Setting local description with answer...');
 				await peerConnection.setLocalDescription(answer);
+
+				// Wait briefly for candidates to gather (gives TURN servers a chance)
+				console.log('⏳ Waiting for ICE candidates to gather... (3 seconds for TURN servers)');
+				await new Promise(resolve => {
+					const checkInterval = setInterval(() => {
+						const iceGathering = peerConnection.iceGatheringState;
+						if (iceGathering === 'complete') {
+							console.log('✅ ICE gathering complete!');
+							clearInterval(checkInterval);
+							resolve();
+						}
+					}, 100);
+
+					// Timeout after 3 seconds (allow time for TURN)
+					setTimeout(() => {
+						clearInterval(checkInterval);
+						console.warn('⏱️ ICE gathering timeout - proceeding anyway');
+						resolve();
+					}, 3000);
+				});
 
 				console.log('📡 Sending answer back to peer...');
 				socket.emit('answer', {
