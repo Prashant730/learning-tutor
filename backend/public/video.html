@@ -652,8 +652,9 @@
 				log('error', `Failed to handle offer: ${e.message}`);
 				console.error('Offer error:', e);
 			}
+		});
 
-			state.socket.on('answer', async (data) => {
+		state.socket.on('answer', async (data) => {
 			log('info', `Answer received from peer (${data.from})`);
 			const pc = state.peerConnections[data.from];
 			if (!pc) {
