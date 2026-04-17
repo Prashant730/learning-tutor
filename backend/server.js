@@ -25,13 +25,20 @@ const io = new Server(server, {
 })
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }))
+app.use(helmet({
+  contentSecurityPolicy: false,
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}))
 app.use(
   cors({
     origin: allowedOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
-  }),
+    optionsSuccessStatus: 200
+  })
 )
 app.use(express.json())
 
