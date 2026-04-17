@@ -1368,21 +1368,20 @@
 		// ── Add participant card ──
 		function addParticipant(name, joinOrder, micOn, cameraOn = true) {
 			const list = document.getElementById('participants-list');
-			if (list.children.length === 0) {
-				const row = document.createElement('div');
-				row.className = 'participant-row';
-				row.innerHTML = `
-					<div class="participant-row-header">
-						<span class="participant-name">${name} (You)</span>
-						<span class="participant-status">Connected</span>
-					</div>
-					<div class="participant-metadata">
-						<span class="meta-pill">Joined #${joinOrder}</span>
-						<span class="meta-pill" id="mic-status-pill">${micOn ? 'Mic On' : 'Mic Off'}</span>
-						<span class="meta-pill" id="cam-status-pill">${cameraOn ? 'Camera On' : 'Camera Off'}</span>
-					</div>`;
-				list.appendChild(row);
-			}
+			const row = document.createElement('div');
+			row.className = 'participant-row';
+			const youLabel = joinOrder === 1 ? ' (You)' : '';
+			row.innerHTML = `
+				<div class="participant-row-header">
+					<span class="participant-name">${name}${youLabel}</span>
+					<span class="participant-status">Connected</span>
+				</div>
+				<div class="participant-metadata">
+					<span class="meta-pill">Joined #${joinOrder}</span>
+					<span class="meta-pill" ${joinOrder === 1 ? 'id="mic-status-pill"' : ''}>${micOn ? 'Mic On' : 'Mic Off'}</span>
+					<span class="meta-pill" ${joinOrder === 1 ? 'id="cam-status-pill"' : ''}>${cameraOn ? 'Camera On' : 'Camera Off'}</span>
+				</div>`;
+			list.appendChild(row);
 		}
 
 		// ── Mic toggle ──
